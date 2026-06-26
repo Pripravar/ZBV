@@ -24,6 +24,10 @@
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg button{background:var(--edit);color:var(--muted);border:0;padding:8px 12px;font-size:13px;cursor:pointer}
   .seg button.on{background:var(--accent);color:#fff;font-weight:700}
+  .stavbatabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;margin-bottom:2px;scrollbar-width:thin}
+  .stavbatabs button{flex:0 0 auto;background:var(--edit);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .stavbatabs button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  .stavbatabs button .c{opacity:.65;font-size:11px;margin-left:5px}
   .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
   .b-hotovo{background:var(--hotovo)}.b-vproces{background:var(--vproces)}.b-bezprogresu{background:var(--bezprogresu)}.b-fakturovano{background:var(--fakturovano)}
   .stavba{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
@@ -124,6 +128,7 @@
     <button id="f-dul" class="btn">★ Jen důležité</button>
     <button id="exp" class="btn">⬇️ Export CSV</button>
   </div>
+  <div class="stavbatabs" id="stavba-tabs"></div>
   <div id="list"></div>
   <div id="inbox" class="hidden"></div>
 </div>
@@ -245,6 +250,7 @@ var STAV_LBL={hotovo:'Hotovo',vproces:'V procesu',bezprogresu:'Bez progresu',fak
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{}};
 var FILTER={q:'',stavba:'',stav:'all',dulezite:false};
 var VIEW='tabulka';
+var STAVBA_INIT=false;
 var db=null,auth=null,started=false;
 
 // ╔══════════════════════ RENDER TABULKY ══════════════════════╗
@@ -283,14 +289,16 @@ function sumStavba(sid){
   return {p:p,n:n,h:h,cnt:cnt};
 }
 function renderTabulka(){
-  buildStavbaFilter();
+  var _ord=stavbyOrdered();
+  if(!STAVBA_INIT&&_ord.length){if(!FILTER.stavba)FILTER.stavba=_ord[0].sid;STAVBA_INIT=true;}
+  buildStavbaFilter();buildStavbaTabs();
   var html='';
-  stavbyOrdered().forEach(function(o){
+  var single=FILTER.stavba&&!FILTER.q;   // jedna vybraná stavba (a nehledá se) → zobraz jen ji
+  _ord.forEach(function(o){
     var sid=o.sid,s=o.s;
-    if(FILTER.stavba&&FILTER.stavba!==sid)return;
+    if(single&&FILTER.stavba!==sid)return;
     var rowsArr=zbvOrdered(sid).filter(function(r){return rowMatches(sid,r.zid,r.z);});
-    // při aktivním filtru přeskoč stavby bez shody (kromě výběru konkrétní stavby)
-    if(!rowsArr.length && (FILTER.q||FILTER.stav!=='all'||FILTER.dulezite) && !FILTER.stavba)return;
+    if(!rowsArr.length&&!single)return;
     var cols=activeCols(sid);
     var sm=sumStavba(sid);
     var LIDE_L={stavbyvedouci:'SV',pripravar:'PŘ',objednatel:'OBJ',AD:'AD',TDI:'TDI'};
@@ -342,9 +350,19 @@ function rowTr(sid,zid,z,cols){
   return '<tr class="st-'+st+'">'+first+tds+'</tr>';
 }
 function buildStavbaFilter(){
-  var sel=$('f-stavba'),cur=sel.value,opts='<option value="">Všechny stavby</option>';
+  var sel=$('f-stavba'),opts='<option value="">Všechny stavby (přehled)</option>';
   stavbyOrdered().forEach(function(o){opts+='<option value="'+o.sid+'">'+esc(o.s.nazev||o.sid)+'</option>';});
-  sel.innerHTML=opts;sel.value=cur;
+  sel.innerHTML=opts;sel.value=FILTER.stavba;
+}
+function buildStavbaTabs(){
+  var el=$('stavba-tabs');if(!el)return;var html='';
+  stavbyOrdered().forEach(function(o){
+    var cnt=Object.keys(DATA.zbv[o.sid]||{}).length;
+    html+='<button data-tab="'+o.sid+'" class="'+(FILTER.stavba===o.sid?'on':'')+'">'+esc(o.s.nazev||o.sid)+(cnt?'<span class="c">'+cnt+'</span>':'')+'</button>';
+  });
+  el.innerHTML=html;
+  var act=el.querySelector('button.on');
+  if(act)el.scrollLeft=Math.max(0,act.offsetLeft-el.clientWidth/2+act.clientWidth/2);
 }
 
 // ╔══════════════════════ SCHRÁNKA (inbox) ══════════════════════╗
@@ -532,11 +550,12 @@ function exportCSV(){
 // ╔══════════════════════ UDÁLOSTI ══════════════════════╗
 $('search').addEventListener('input',function(){FILTER.q=this.value;renderTabulka();});
 $('f-stavba').addEventListener('change',function(){FILTER.stavba=this.value;renderTabulka();});
+$('stavba-tabs').addEventListener('click',function(e){var b=e.target.closest('button[data-tab]');if(!b)return;FILTER.stavba=b.getAttribute('data-tab');FILTER.q='';$('search').value='';renderTabulka();});
 $('f-stav').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;FILTER.stav=b.getAttribute('data-v');[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});renderTabulka();});
 $('f-dul').addEventListener('click',function(){FILTER.dulezite=!FILTER.dulezite;this.classList.toggle('on',FILTER.dulezite);renderTabulka();});
 $('exp').addEventListener('click',exportCSV);
 $('view').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setView(b.getAttribute('data-v'));[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});});
-function setView(v){VIEW=v;$('list').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');if(v==='schranka')renderInbox();else renderTabulka();}
+function setView(v){VIEW=v;$('list').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('stavba-tabs').classList.toggle('hidden',v!=='tabulka');if(v==='schranka')renderInbox();else renderTabulka();}
 $('list').addEventListener('click',function(e){
   var ed=e.target.closest('[data-ed]');if(ed){var p=ed.getAttribute('data-ed').split('|');openEditZbv(p[0],p[1]);return;}
   var ad=e.target.closest('[data-add]');if(ad){openNewZbv(ad.getAttribute('data-add'));return;}
