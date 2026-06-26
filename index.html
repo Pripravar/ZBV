@@ -28,6 +28,68 @@
   .stavbatabs button{flex:0 0 auto;background:var(--edit);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;white-space:nowrap}
   .stavbatabs button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
   .stavbatabs button .c{opacity:.65;font-size:11px;margin-left:5px}
+  /* layout 2 sloupce: levý panel + obsah */
+  .cols{display:flex;gap:12px;align-items:flex-start}
+  #stavby-side{flex:0 0 236px;display:flex;flex-direction:column;gap:5px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:92px}
+  #list{flex:1;min-width:0}
+  .sb-search{width:100%;background:var(--edit);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;margin-bottom:3px}
+  .sb-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+  .sb-item.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  .sb-item .nm{font-size:13px;font-weight:700;display:flex;align-items:baseline;gap:6px;line-height:1.25}
+  .sb-item .nm .cnt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+  .sb-item .sub{font-size:10.5px;color:var(--muted);margin:2px 0 7px}
+  .sb-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#0c131b}
+  .sb-bar i{display:block;height:100%}
+  .seg-bezprogresu{background:var(--bezprogresu)} .seg-vproces{background:var(--vproces)} .seg-hotovo{background:var(--hotovo)} .seg-fakturovano{background:var(--fakturovano)}
+  /* kombinovatelné filtry stavů */
+  .fchips{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .fchip{font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--edit);color:var(--muted);cursor:pointer}
+  .fchip.on{font-weight:700;color:#fff}
+  .fchip.on.f-vproces{background:var(--vproces);border-color:var(--vproces)}
+  .fchip.on.f-hotovo{background:var(--hotovo);border-color:var(--hotovo)}
+  .fchip.on.f-fakturovano{background:var(--fakturovano);border-color:var(--fakturovano)}
+  .fchip.on.f-bezprogresu{background:var(--bezprogresu);border-color:var(--bezprogresu)}
+  /* hlavička stavby */
+  .shead{background:var(--title);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .shead .nazev{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .shead .cislo{font-size:11px;background:var(--edit);padding:2px 8px;border-radius:999px;color:var(--muted);font-weight:400}
+  .shead .lide{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.7}
+  .shead .lide b{color:var(--txt);font-weight:600}
+  .smetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+  .smetric{background:var(--edit);border-radius:8px;padding:8px 10px}
+  .smetric .l{font-size:11px;color:var(--muted)} .smetric .v{font-size:15px;font-weight:700;margin-top:2px}
+  .smetric .ok{font-size:11px;color:var(--pos);font-weight:400} .smetric .warn{font-size:11px;color:var(--neg);font-weight:400}
+  /* ZBV karty */
+  .zcard{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;overflow:hidden}
+  .zhead{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;flex-wrap:wrap}
+  .zbadge{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;color:#fff;white-space:nowrap}
+  .znazev{font-size:13.5px;font-weight:700} .zmeta{font-size:11px;color:var(--muted)}
+  .zchev{margin-left:auto;color:var(--muted);font-size:12px;transition:transform .15s}
+  .zcard.open .zchev{transform:rotate(90deg)}
+  .zstad{display:flex;align-items:center;gap:9px;padding:0 12px 10px;flex-wrap:wrap}
+  .stadchip{font-size:12px;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font-weight:600}
+  .st-vproces .stadchip{background:#3a2c08;color:#fcd34d} .st-hotovo .stadchip{background:#11331c;color:#86efac}
+  .st-fakturovano .stadchip{background:#0d2748;color:#93c5fd} .st-bezprogresu .stadchip{background:#222a33;color:#9fb2c6}
+  .zwait{font-size:11.5px;color:var(--muted)} .zamt{margin-left:auto;font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .zamt .p{color:var(--pos)} .zamt .n{color:var(--neg)}
+  /* časová osa (historie) */
+  .zdetail{border-top:1px solid var(--line);padding:11px 13px;background:var(--edit)}
+  .tl-phase{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 3px}
+  .tl{position:relative;padding-left:13px;border-left:2px solid var(--line)}
+  .tl-item{position:relative;padding:3px 0 7px 8px}
+  .tl-item:before{content:'';position:absolute;left:-7px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--accent)}
+  .tl-item.last:before{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+  .tl-lab{font-size:10.5px;color:var(--muted)} .tl-val{font-size:13px;white-space:pre-line}
+  .tl-empty{font-size:12px;color:var(--muted);padding:4px 0}
+  .zdrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;font-size:12.5px;margin:8px 0}
+  .zdrow .k{color:var(--muted);font-size:10.5px;display:block}
+  .zacts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  @media(max-width:760px){
+    .cols{flex-direction:column}
+    #stavby-side{flex:none;width:100%;position:static;max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+    #stavby-side .sb-search{display:none}
+    .sb-item{flex:0 0 180px}
+  }
   .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
   .b-hotovo{background:var(--hotovo)}.b-vproces{background:var(--vproces)}.b-bezprogresu{background:var(--bezprogresu)}.b-fakturovano{background:var(--fakturovano)}
   .stavba{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
@@ -116,20 +178,20 @@
 
 <div class="wrap hidden" id="app">
   <div class="toolbar" id="tb-tabulka">
-    <input id="search" class="ctrl" placeholder="🔎 hledat (stavba, ZBV, SO, popis…)">
-    <select id="f-stavba" class="ctrl"><option value="">Všechny stavby</option></select>
-    <div class="seg" id="f-stav">
-      <button data-v="all" class="on">Vše</button>
-      <button data-v="vproces">V procesu</button>
-      <button data-v="hotovo">Hotovo</button>
-      <button data-v="fakturovano">Fakturováno</button>
-      <button data-v="bezprogresu">Bez progresu</button>
+    <input id="search" class="ctrl" placeholder="🔎 hledat ve vybrané stavbě (ZBV, SO, popis…)">
+    <div class="fchips" id="f-stav">
+      <button class="fchip f-vproces" data-v="vproces">V procesu</button>
+      <button class="fchip f-hotovo" data-v="hotovo">Hotovo</button>
+      <button class="fchip f-fakturovano" data-v="fakturovano">Fakturováno</button>
+      <button class="fchip f-bezprogresu" data-v="bezprogresu">Bez progresu</button>
     </div>
     <button id="f-dul" class="btn">★ Jen důležité</button>
     <button id="exp" class="btn">⬇️ Export CSV</button>
   </div>
-  <div class="stavbatabs" id="stavba-tabs"></div>
-  <div id="list"></div>
+  <div class="cols">
+    <aside id="stavby-side"></aside>
+    <div id="list"></div>
+  </div>
   <div id="inbox" class="hidden"></div>
 </div>
 
@@ -248,9 +310,11 @@ var STAV_LBL={hotovo:'Hotovo',vproces:'V procesu',bezprogresu:'Bez progresu',fak
 
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{}};
-var FILTER={q:'',stavba:'',stav:'all',dulezite:false};
+var FILTER={q:'',stavba:'',stav:{},dulezite:false};   // stav = množina aktivních stavů ({} = vše)
 var VIEW='tabulka';
 var STAVBA_INIT=false;
+var EXPANDED={};   // rozbalené ZBV karty (klíč zbvKey)
+var PHASE_LBL={ozn:'Oznámení',proces:'Proces ZBV',fakt:'Fakturace'};
 var db=null,auth=null,started=false;
 
 // ╔══════════════════════ RENDER TABULKY ══════════════════════╗
@@ -271,7 +335,7 @@ function activeCols(sid){
 }
 function rowMatches(sid,zid,z){
   var st=effStav(z);
-  if(FILTER.stav!=='all'&&FILTER.stav!==st)return false;
+  var actSt=Object.keys(FILTER.stav);if(actSt.length&&!FILTER.stav[st])return false;
   if(FILTER.dulezite&&!DATA.dulezite[zbvKey(sid,zid)])return false;
   var q=FILTER.q.trim().toLowerCase();
   if(q){
@@ -288,81 +352,110 @@ function sumStavba(sid){
   });
   return {p:p,n:n,h:h,cnt:cnt};
 }
+// počty ZBV po stavech (pro panel i hlavičku)
+function statCounts(sid){
+  var c={bezprogresu:0,vproces:0,hotovo:0,fakturovano:0,total:0};
+  zbvOrdered(sid).forEach(function(o){c.total++;var st=effStav(o.z);c[st]=(c[st]||0)+1;});
+  return c;
+}
+// limity dle ZZVZ §222 (z ceny díla): sk.3+4 = 30 %, sk.5 = 15 %
+function limity(s,sid){
+  var cena=toNum(s.cenaDila),cer34=0,cer5=0;
+  zbvOrdered(sid).forEach(function(o){var sk=String(getVal(o.z,'skupina'));var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);
+    if(/3|4/.test(sk))cer34+=abs; if(/5/.test(sk))cer5+=abs;});
+  return {cena:cena,l34:cena!=null?cena*0.30:null,l5:cena!=null?cena*0.15:null,cer34:cer34,cer5:cer5};
+}
+// stadium = poslední vyplněný krok (v pořadí životního cyklu) = kde to teď je
+function stadium(z){
+  var done=null,idx=-1;
+  KROK_IDS.forEach(function(id,i){if(getVal(z,id)){done=id;idx=i;}});
+  var next=null;for(var k=idx+1;k<KROK_IDS.length;k++){if(!getVal(z,KROK_IDS[k])){next=KROK_IDS[k];break;}}
+  return {done:done,doneLab:done?COL_BY_ID[done].l:'',doneVal:done?String(getVal(z,done)):'',nextLab:next?COL_BY_ID[next].l:''};
+}
+function firstDate(s){var m=String(s).match(/\d{1,2}\.\s?\d{1,2}\.\s?\d{2,4}/);return m?m[0]:'';}
+function upd(){$('updated').textContent='M - SILNICE a.s. · staveb: '+Object.keys(DATA.stavby).length+' · aktualizováno: '+(DATA.meta&&DATA.meta.updatedAt?DATA.meta.updatedAt:'—');}
+
 function renderTabulka(){
   var _ord=stavbyOrdered();
   if(!STAVBA_INIT&&_ord.length){if(!FILTER.stavba)FILTER.stavba=_ord[0].sid;STAVBA_INIT=true;}
-  buildStavbaFilter();buildStavbaTabs();
-  var html='';
-  var single=FILTER.stavba&&!FILTER.q;   // jedna vybraná stavba (a nehledá se) → zobraz jen ji
-  _ord.forEach(function(o){
-    var sid=o.sid,s=o.s;
-    if(single&&FILTER.stavba!==sid)return;
-    var rowsArr=zbvOrdered(sid).filter(function(r){return rowMatches(sid,r.zid,r.z);});
-    if(!rowsArr.length&&!single)return;
-    var cols=activeCols(sid);
-    var sm=sumStavba(sid);
-    var LIDE_L={stavbyvedouci:'SV',pripravar:'PŘ',objednatel:'OBJ',AD:'AD',TDI:'TDI'};
-    var lide=[];if(s.lide){['stavbyvedouci','pripravar','objednatel','AD','TDI'].forEach(function(k){if(s.lide[k])lide.push(LIDE_L[k]+': '+s.lide[k]);});}
-    // hlavička skupin
-    var grpTh='<th class="first" rowspan="2">ZBV</th>';
-    var colTh='';
-    GROUPS.forEach(function(G){
-      var gc=cols.filter(function(c){return c.g===G[0];});
-      if(!gc.length)return;
-      grpTh+='<th class="'+G[2]+'" colspan="'+gc.length+'">'+esc(G[1])+'</th>';
-      gc.forEach(function(c){colTh+='<th>'+esc(c.l)+'</th>';});
-    });
-    var body='';
-    rowsArr.forEach(function(r){body+=rowTr(sid,r.zid,r.z,cols);});
-    if(!body)body='<tr><td class="empty" colspan="'+(cols.length+1)+'">Žádné ZBV (filtr nebo prázdné).</td></tr>';
-    html+='<div class="stavba"><div class="title"><div style="min-width:240px">'
-      +'<div class="nazev">'+esc(s.nazev||sid)+(s.cislo?' <span class="pill">'+esc(s.cislo)+'</span>':'')+'</div>'
-      +(s.info?'<div class="info">'+esc(s.info)+'</div>':'')
-      +(lide.length?'<div class="info">'+esc(lide.join(' · '))+'</div>':'')
-      +'</div><div class="spc"></div>'
-      +'<div class="sum">'+(s.cenaDila?'Cena díla: <b>'+fmtNum(s.cenaDila)+'</b> Kč':'')
-      +'<span>ZBV: <b>'+sm.cnt+'</b></span>'
-      +'<span class="p">+'+fmtNum(sm.p)+'</span><span class="n">−'+fmtNum(Math.abs(sm.n))+'</span>'
-      +'<span>hodnota: <b>'+fmtNum(sm.h)+'</b></span>'
-      +'<button class="btn btn-add" data-add="'+sid+'">+ ZBV</button></div></div>'
-      +'<div class="tbl-scroll"><table><thead><tr class="grp">'+grpTh+'</tr><tr>'+colTh+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
-  });
-  $('list').innerHTML=html||'<div class="empty">Nic neodpovídá filtru.</div>';
-  $('updated').textContent='M - SILNICE a.s. · staveb: '+Object.keys(DATA.stavby).length+' · aktualizováno: '+(DATA.meta&&DATA.meta.updatedAt?DATA.meta.updatedAt:'—');
+  buildStavbySide();
+  var sid=FILTER.stavba,s=DATA.stavby[sid];
+  if(!sid||!s){$('list').innerHTML='<div class="empty">Vyber stavbu v panelu vlevo.</div>';upd();return;}
+  // hlavička stavby (lidé + limity)
+  var ROLES=[['stavbyvedouci','SV'],['pripravar','PŘ'],['objednatel','OBJ'],['AD','AD'],['TDI','TDI'],['CM','CM']];
+  var lideHtml=ROLES.map(function(p){return p[1]+': <b>'+esc((s.lide&&s.lide[p[0]])||'—')+'</b>';}).join(' · ');
+  var L=limity(s,sid),sc=statCounts(sid);
+  var metr='<div class="smetrics">';
+  metr+='<div class="smetric"><div class="l">Cena díla (vysoutěženo)</div><div class="v">'+(L.cena!=null?fmtNum(L.cena)+' Kč':'— zadej')+'</div></div>';
+  if(L.l34!=null)metr+='<div class="smetric"><div class="l">Limit sk. 3+4 · 30 %</div><div class="v">'+fmtNum(L.l34)+' <span class="'+(L.cer34<=L.l34?'ok':'warn')+'">zbývá '+fmtNum(L.l34-L.cer34)+'</span></div></div>';
+  if(L.l5!=null)metr+='<div class="smetric"><div class="l">Limit sk. 5 · 15 %</div><div class="v">'+fmtNum(L.l5)+' <span class="'+(L.cer5<=L.l5?'ok':'warn')+'">zbývá '+fmtNum(L.l5-L.cer5)+'</span></div></div>';
+  metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
+  var head='<div class="shead"><div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">'
+    +'<div class="nazev">'+esc(s.nazev||sid)+(s.cislo?'<span class="cislo">č. '+esc(s.cislo)+'</span>':'')+'</div>'
+    +'<button class="btn" data-eds="'+sid+'" style="margin-left:auto">✏️ upravit stavbu</button>'
+    +'<button class="btn btn-add" data-add="'+sid+'">+ ZBV</button></div>'
+    +(s.info?'<div class="lide">'+esc(s.info)+'</div>':'')
+    +'<div class="lide">'+lideHtml+'</div>'+metr+'</div>';
+  // ZBV karty
+  var rows=zbvOrdered(sid).filter(function(r){return rowMatches(sid,r.zid,r.z);});
+  rows.sort(function(a,b){return (toNum(getVal(a.z,'oznameniCislo'))||999)-(toNum(getVal(b.z,'oznameniCislo'))||999);});
+  var cards=rows.map(function(r){return zbvCard(sid,r.zid,r.z);}).join('');
+  $('list').innerHTML=head+(cards||'<div class="empty">Žádné ZBV odpovídající filtru.</div>');
+  upd();
 }
-function rowTr(sid,zid,z,cols){
-  var st=effStav(z);var key=zbvKey(sid,zid);
+function zbvCard(sid,zid,z){
+  var st=effStav(z),key=zbvKey(sid,zid),open=!!EXPANDED[key];
   var dul=!!DATA.dulezite[key];
-  var note=DATA.poznamky[key]||'';
-  var star='<button class="rowbtn star'+(dul?' on':'')+'" data-star="'+key+'">'+(dul?'★':'☆')+'</button>';
-  var btns=star+'<button class="rowbtn" data-ed="'+sid+'|'+zid+'">✏️</button><button class="rowbtn del" data-del="'+sid+'|'+zid+'">✕</button>';
-  var first='<td class="first"><div>'+btns+' <span class="badge b-'+st+'">'+esc(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'—')+'</span></div>'
-    +'<div class="nm">'+esc(z.nazev||'')+'</div>'
-    +(z.popis?'<div class="ds">'+esc(z.popis)+'</div>':'')
-    +(note?'<div class="ds">📝 '+esc(note)+'</div>':'')+'</td>';
-  var tds='';
-  cols.forEach(function(c){
-    var v=getVal(z,c.id);
-    if(c.num)tds+='<td class="cena">'+(v===''?'':fmtNum(v))+'</td>';
-    else if(c.krok)tds+='<td class="krok">'+esc(v)+'</td>';
-    else tds+='<td>'+esc(v)+'</td>';
-  });
-  return '<tr class="st-'+st+'">'+first+tds+'</tr>';
+  var num=getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'—';
+  var sd=stadium(z);
+  var amt='';var kl=fmtNum(getVal(z,'zmenyKladne')),zp=toNum(getVal(z,'zmenyZaporne'));
+  if(kl)amt+='<span class="p">+'+kl+'</span> ';if(zp)amt+='<span class="n">−'+fmtNum(Math.abs(zp))+'</span>';
+  var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
+  var stadHtml=sd.done
+    ?'<span class="stadchip">'+esc(sd.doneLab)+(firstDate(sd.doneVal)?' · '+firstDate(sd.doneVal):'')+'</span>'+(sd.nextLab?'<span class="zwait">další: '+esc(sd.nextLab)+'</span>':'')
+    :'<span class="stadchip">zatím bez kroků — jen evidováno</span>';
+  var h='<div class="zcard st-'+st+(open?' open':'')+'">'
+    +'<div class="zhead" data-toggle="'+sid+'|'+zid+'">'
+      +'<span class="zbadge b-'+st+'">ZBV '+esc(num)+'</span>'
+      +(dul?'<span title="důležité" style="color:#f5c518">★</span>':'')
+      +'<span class="znazev">'+esc(z.nazev||'(bez názvu)')+'</span>'
+      +(meta.length?'<span class="zmeta">'+esc(meta.join(' · '))+'</span>':'')
+      +'<span class="zchev">▸</span></div>'
+    +'<div class="zstad">'+stadHtml+(amt?'<span class="zamt">'+amt+'</span>':'')+'</div>';
+  if(open)h+=zbvDetail(sid,zid,z);
+  return h+'</div>';
 }
-function buildStavbaFilter(){
-  var sel=$('f-stavba'),opts='<option value="">Všechny stavby (přehled)</option>';
-  stavbyOrdered().forEach(function(o){opts+='<option value="'+o.sid+'">'+esc(o.s.nazev||o.sid)+'</option>';});
-  sel.innerHTML=opts;sel.value=FILTER.stavba;
+function zbvDetail(sid,zid,z){
+  var key=zbvKey(sid,zid),note=DATA.poznamky[key]||'',dul=!!DATA.dulezite[key];
+  var h='<div class="zdetail">';
+  var idf=[['popis',z.popis],['příčina změny',getVal(z,'pricina')],['SO / objekt',((getVal(z,'SO')||'')+' '+(getVal(z,'nazevSO')||'')).trim()],['skupina (§222)',getVal(z,'skupina')],
+    ['změny kladné',fmtNum(getVal(z,'zmenyKladne'))],['změny záporné',fmtNum(getVal(z,'zmenyZaporne'))],['hodnota ZBV',fmtNum(getVal(z,'hodnotaZBV'))]];
+  h+='<div class="zdrow">'+idf.map(function(p){return p[1]?'<div><span class="k">'+p[0]+'</span>'+esc(p[1])+'</div>':'';}).join('')+'</div>';
+  if(note)h+='<div class="zdrow"><div><span class="k">📝 moje poznámka</span>'+esc(note)+'</div></div>';
+  var sd=stadium(z);
+  h+='<div class="tl-phase">Historie / kde to kdy bylo</div>';
+  var tl='';
+  GROUPS.forEach(function(G){if(G[0]==='ident'||G[0]==='penize')return;
+    COLS.filter(function(c){return c.g===G[0]&&c.krok;}).forEach(function(c){var v=getVal(z,c.id);if(!v)return;
+      tl+='<div class="tl-item'+(c.id===sd.done?' last':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[G[0]]+' · '+c.l)+'</div><div class="tl-val">'+esc(v)+'</div></div>';});});
+  h+=tl?'<div class="tl">'+tl+'</div>':'<div class="tl-empty">Zatím žádné kroky — doplní se z mailů, nebo dopiš přes „upravit".</div>';
+  h+='<div class="zacts"><button class="btn" data-ed="'+sid+'|'+zid+'">✏️ upravit / doplnit</button>'
+    +'<button class="btn" data-star="'+key+'">'+(dul?'★ důležité':'☆ označit důležité')+'</button>'
+    +'<button class="btn" data-del="'+sid+'|'+zid+'" style="color:var(--neg)">✕ smazat</button></div>';
+  return h+'</div>';
 }
-function buildStavbaTabs(){
-  var el=$('stavba-tabs');if(!el)return;var html='';
+function buildStavbySide(){
+  var el=$('stavby-side');if(!el)return;var html='';
   stavbyOrdered().forEach(function(o){
-    var cnt=Object.keys(DATA.zbv[o.sid]||{}).length;
-    html+='<button data-tab="'+o.sid+'" class="'+(FILTER.stavba===o.sid?'on':'')+'">'+esc(o.s.nazev||o.sid)+(cnt?'<span class="c">'+cnt+'</span>':'')+'</button>';
+    var c=statCounts(o.sid),t=c.total||1;
+    function seg(k){return c[k]?'<i class="seg-'+k+'" style="width:'+(c[k]/t*100)+'%"></i>':'';}
+    var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'';
+    html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+'" data-side="'+o.sid+'">'
+      +'<div class="nm">'+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
+      +'<div class="sub">'+(o.s.cislo?'č. '+esc(o.s.cislo):'')+(o.s.cislo&&pr?' · ':'')+(pr?'PŘ '+esc(pr):'')+'</div>'
+      +'<div class="sb-bar">'+seg('bezprogresu')+seg('vproces')+seg('hotovo')+seg('fakturovano')+'</div></div>';
   });
   el.innerHTML=html;
-  var act=el.querySelector('button.on');
-  if(act)el.scrollLeft=Math.max(0,act.offsetLeft-el.clientWidth/2+act.clientWidth/2);
 }
 
 // ╔══════════════════════ SCHRÁNKA (inbox) ══════════════════════╗
@@ -502,6 +595,36 @@ function delZbv(sid,zid){
   if(!db)renderTabulka();
 }
 
+// ── modal: editace stavby (lidé + e-maily + cena díla) ──
+var STAVBA_ROLES=[['stavbyvedouci','Stavbyvedoucí'],['pripravar','Přípravář'],['objednatel','Objednatel'],['AD','Autorský dozor (AD)'],['TDI','Technický dozor (TDI/TDS)'],['CM','Supervize / CM']];
+function openEditStavba(sid){
+  var s=DATA.stavby[sid]||{},lide=s.lide||{},mail=s.lideMail||{};
+  var h='<div class="mbox"><h3>Upravit stavbu</h3>'
+    +'<div class="mgrid2"><div><label>Název stavby</label><input id="s-nazev" value="'+esc(s.nazev||'')+'"></div>'
+    +'<div><label>Číslo stavby</label><input id="s-cislo" value="'+esc(s.cislo||'')+'"></div></div>'
+    +'<div class="mgrid2"><div><label>Cena díla (vysoutěženo, Kč) — počítá limity</label><input id="s-cena" value="'+esc(s.cenaDila!=null?s.cenaDila:'')+'"></div>'
+    +'<div><label>Poznámka / info</label><input id="s-info" value="'+esc(s.info||'')+'"></div></div>'
+    +'<h4>Lidé a e-maily</h4>';
+  STAVBA_ROLES.forEach(function(r){
+    h+='<div class="mgrid2"><div><label>'+r[1]+'</label><input id="s-l-'+r[0]+'" value="'+esc(lide[r[0]]||'')+'"></div>'
+      +'<div><label>e-mail</label><input id="s-m-'+r[0]+'" value="'+esc(mail[r[0]]||'')+'" placeholder="@msilnice.cz"></div></div>';
+  });
+  h+='<div class="mbtns"><button class="btn" id="m-cancel">Zrušit</button><button class="btn save" id="s-save">Uložit</button></div></div>';
+  $('modal').innerHTML=h;$('modal').classList.remove('hidden');
+  $('m-cancel').onclick=closeModal;
+  $('s-save').onclick=function(){
+    var s2=DATA.stavby[sid]||{};
+    s2.nazev=$('s-nazev').value.trim();s2.cislo=$('s-cislo').value.trim();s2.info=$('s-info').value.trim();
+    var cena=toNum($('s-cena').value);if(cena!=null)s2.cenaDila=cena;else delete s2.cenaDila;
+    s2.lide=s2.lide||{};s2.lideMail=s2.lideMail||{};
+    STAVBA_ROLES.forEach(function(r){var n=$('s-l-'+r[0]).value.trim(),m=$('s-m-'+r[0]).value.trim();
+      if(n)s2.lide[r[0]]=n;else delete s2.lide[r[0]];if(m)s2.lideMail[r[0]]=m;else delete s2.lideMail[r[0]];});
+    DATA.stavby[sid]=s2;
+    if(db)db.ref('/stavby/'+sid).update({nazev:s2.nazev,cislo:s2.cislo,info:s2.info,cenaDila:s2.cenaDila!=null?s2.cenaDila:null,lide:s2.lide,lideMail:s2.lideMail});
+    closeModal();if(!db)renderTabulka();
+  };
+}
+
 // ── modal: upravit a potvrdit návrh ze schránky ──
 function openEditNavrh(id){
   var i=DATA.inbox[id];if(!i)return;var nv=i.navrh||{};
@@ -549,14 +672,15 @@ function exportCSV(){
 
 // ╔══════════════════════ UDÁLOSTI ══════════════════════╗
 $('search').addEventListener('input',function(){FILTER.q=this.value;renderTabulka();});
-$('f-stavba').addEventListener('change',function(){FILTER.stavba=this.value;renderTabulka();});
-$('stavba-tabs').addEventListener('click',function(e){var b=e.target.closest('button[data-tab]');if(!b)return;FILTER.stavba=b.getAttribute('data-tab');FILTER.q='';$('search').value='';renderTabulka();});
-$('f-stav').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;FILTER.stav=b.getAttribute('data-v');[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});renderTabulka();});
+$('f-stav').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var v=b.getAttribute('data-v');if(FILTER.stav[v])delete FILTER.stav[v];else FILTER.stav[v]=true;b.classList.toggle('on',!!FILTER.stav[v]);renderTabulka();});
 $('f-dul').addEventListener('click',function(){FILTER.dulezite=!FILTER.dulezite;this.classList.toggle('on',FILTER.dulezite);renderTabulka();});
 $('exp').addEventListener('click',exportCSV);
 $('view').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setView(b.getAttribute('data-v'));[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});});
-function setView(v){VIEW=v;$('list').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('stavba-tabs').classList.toggle('hidden',v!=='tabulka');if(v==='schranka')renderInbox();else renderTabulka();}
+function setView(v){VIEW=v;document.querySelector('.cols').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');if(v==='schranka')renderInbox();else renderTabulka();}
+$('stavby-side').addEventListener('click',function(e){var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
 $('list').addEventListener('click',function(e){
+  var tg=e.target.closest('[data-toggle]');if(tg){var pt=tg.getAttribute('data-toggle').split('|');var kk=zbvKey(pt[0],pt[1]);EXPANDED[kk]=!EXPANDED[kk];renderTabulka();return;}
+  var es=e.target.closest('[data-eds]');if(es){openEditStavba(es.getAttribute('data-eds'));return;}
   var ed=e.target.closest('[data-ed]');if(ed){var p=ed.getAttribute('data-ed').split('|');openEditZbv(p[0],p[1]);return;}
   var ad=e.target.closest('[data-add]');if(ad){openNewZbv(ad.getAttribute('data-add'));return;}
   var dl=e.target.closest('[data-del]');if(dl){var p2=dl.getAttribute('data-del').split('|');delZbv(p2[0],p2[1]);return;}
