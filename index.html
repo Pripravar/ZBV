@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ZBV — přehled změn během výstavby</title>
 <style>
-  :root{--bg:#0f1720;--card:#16212e;--line:#26384a;--txt:#e7eef6;--muted:#9fb2c6;
-    --accent:#3b82f6;--head:#111c28;--title:#142433;--edit:#0c131b;
-    --pos:#16a34a;--neg:#ef4444;
+  :root{--bg:#ffffff;--card:#ffffff;--line:#e3e6eb;--txt:#1a1d21;--muted:#6b7280;
+    --accent:#2563eb;--head:#f3f4f6;--title:#f7f8fa;--edit:#f5f6f8;
+    --pos:#15803d;--neg:#dc2626;
     --hotovo:#16a34a;--vproces:#d97706;--bezprogresu:#64748b;--fakturovano:#2563eb;}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);-webkit-text-size-adjust:100%}
-  header{position:sticky;top:0;z-index:5;background:#0c131b;border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   header h1{font-size:16px;margin:0;font-weight:700;line-height:1.2}
   header .sub{font-size:11px;color:var(--muted)} header .spacer{flex:1}
-  .btn{background:#1f2d3d;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+  .btn{background:var(--edit);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+  .btn:hover{background:#eceef1}
   .btn:active{transform:translateY(1px)}
   .btn-add{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
   .ctrl{background:var(--edit);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:14px}
@@ -38,9 +39,12 @@
   .sb-item .nm{font-size:13px;font-weight:700;display:flex;align-items:baseline;gap:6px;line-height:1.25}
   .sb-item .nm .cnt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
   .sb-item .sub{font-size:10.5px;color:var(--muted);margin:2px 0 7px}
-  .sb-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#0c131b}
+  .sb-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#eceef1}
   .sb-bar i{display:block;height:100%}
   .seg-bezprogresu{background:var(--bezprogresu)} .seg-vproces{background:var(--vproces)} .seg-hotovo{background:var(--hotovo)} .seg-fakturovano{background:var(--fakturovano)}
+  .sb-item.arch{opacity:.55} .sb-item.arch.on{opacity:1}
+  .sb-arch-btn{font-size:11.5px;color:var(--muted);text-align:center;padding:8px;cursor:pointer;border:1px dashed var(--line);border-radius:8px;margin-top:4px;flex:0 0 auto}
+  .sb-arch-btn:hover{background:var(--edit)}
   /* kombinovatelné filtry stavů */
   .fchips{display:inline-flex;gap:6px;flex-wrap:wrap}
   .fchip{font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--edit);color:var(--muted);cursor:pointer}
@@ -68,8 +72,8 @@
   .zcard.open .zchev{transform:rotate(90deg)}
   .zstad{display:flex;align-items:center;gap:9px;padding:0 12px 10px;flex-wrap:wrap}
   .stadchip{font-size:12px;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font-weight:600}
-  .st-vproces .stadchip{background:#3a2c08;color:#fcd34d} .st-hotovo .stadchip{background:#11331c;color:#86efac}
-  .st-fakturovano .stadchip{background:#0d2748;color:#93c5fd} .st-bezprogresu .stadchip{background:#222a33;color:#9fb2c6}
+  .st-vproces .stadchip{background:#fef3c7;color:#92400e} .st-hotovo .stadchip{background:#dcfce7;color:#166534}
+  .st-fakturovano .stadchip{background:#dbeafe;color:#1e40af} .st-bezprogresu .stadchip{background:#eef1f4;color:#475569}
   .zwait{font-size:11.5px;color:var(--muted)} .zamt{margin-left:auto;font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
   .zamt .p{color:var(--pos)} .zamt .n{color:var(--neg)}
   /* časová osa (historie) */
@@ -100,8 +104,8 @@
   .ph-tbl th,.ph-tbl td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}
   .ph-tbl thead th{font-size:11px;color:var(--muted);background:var(--head)}
   .ph-tbl td.c{text-align:center} .ph-tbl td.cena{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .ph-row{cursor:pointer} .ph-row:hover td{background:#1a2735}
-  .ph-tbl .vp{color:#fcd34d} .ph-tbl .ho{color:#86efac} .ph-tbl .fa{color:#93c5fd}
+  .ph-row{cursor:pointer} .ph-row:hover td{background:#f1f3f5}
+  .ph-tbl .vp{color:#b45309} .ph-tbl .ho{color:#15803d} .ph-tbl .fa{color:#1d4ed8}
   @media(max-width:760px){
     .cols{flex-direction:column}
     #stavby-side{flex:none;width:100%;position:static;max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:4px}
@@ -127,7 +131,7 @@
   td.krok{white-space:pre-line;min-width:130px;max-width:230px;font-size:12px;line-height:1.35}
   td.cena{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   td.first{position:sticky;left:0;background:var(--card);z-index:1;min-width:230px;max-width:320px;box-shadow:2px 0 0 var(--line)}
-  tr:hover td.first{background:#1a2735}
+  tr:hover td.first{background:#f1f3f5}
   td.first .nm{font-weight:700} td.first .ds{color:var(--muted);font-size:11.5px;margin-top:2px}
   tr.st-hotovo td.first{box-shadow:inset 3px 0 0 var(--hotovo),2px 0 0 var(--line)}
   tr.st-vproces td.first{box-shadow:inset 3px 0 0 var(--vproces),2px 0 0 var(--line)}
@@ -140,7 +144,7 @@
   /* inbox */
   .ibx{display:grid;gap:12px;max-width:760px}
   .icard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-  .icard.low{border-color:#7c3a02}
+  .icard.low{border-color:#f59e0b}
   .icard .ih{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
   .icard .subj{font-weight:700;font-size:14px}
   .icard .meta{font-size:11.5px;color:var(--muted);margin-bottom:8px}
@@ -148,7 +152,7 @@
   .navrh .k{color:var(--muted);display:inline-block;min-width:70px}
   .navrh b{color:var(--txt)}
   .jist{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:700}
-  .jist.vysoka{background:#14532d;color:#86efac}.jist.stredni{background:#713f12;color:#fde68a}.jist.nizka{background:#7f1d1d;color:#fca5a5}
+  .jist.vysoka{background:#dcfce7;color:#166534}.jist.stredni{background:#fef3c7;color:#92400e}.jist.nizka{background:#fee2e2;color:#991b1b}
   .iacts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .iacts .ok{background:var(--hotovo);border-color:var(--hotovo);color:#fff;font-weight:700}
   .iacts .no{color:var(--neg)}
@@ -167,11 +171,11 @@
   #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
   #gate .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;width:100%;max-width:340px}
   #gate h2{margin:0 0 4px;font-size:18px} #gate p{margin:0 0 16px;color:var(--muted);font-size:13px}
-  #gate input{width:100%;padding:11px 12px;margin-bottom:10px;border-radius:9px;border:1px solid var(--line);background:#0c131b;color:var(--txt);font-size:15px}
+  #gate input{width:100%;padding:11px 12px;margin-bottom:10px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--txt);font-size:15px}
   #gate .btn{width:100%;background:var(--accent);border-color:var(--accent);font-weight:700;padding:11px}
   #gate .err{color:#f87171;font-size:12px;min-height:16px;margin-top:6px;word-break:break-word}
   .hidden{display:none!important}
-  .demo-bar{background:#7c3a02;color:#ffd9a8;font-size:12px;text-align:center;padding:6px}
+  .demo-bar{background:#fef3c7;color:#92400e;font-size:12px;text-align:center;padding:6px}
   .pill{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
   .ibadge{background:var(--neg);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;margin-left:5px}
 </style>
@@ -340,6 +344,7 @@ var FILTER={q:'',stavba:'',stav:{},dulezite:false};   // stav = množina aktivn�
 var VIEW='tabulka';
 var STAVBA_INIT=false;
 var EXPANDED={};   // rozbalené ZBV karty (klíč zbvKey)
+var SHOW_ARCHIV=false;   // zobrazit i archivované stavby v panelu
 var PHASE_LBL={ozn:'Oznámení',proces:'Proces ZBV',fakt:'Fakturace'};
 var db=null,auth=null,started=false;
 
@@ -348,6 +353,8 @@ function stavbyOrdered(){
   return Object.keys(DATA.stavby).map(function(sid){var s=DATA.stavby[sid];return {sid:sid,s:s};})
     .sort(function(a,b){return (a.s.poradi||0)-(b.s.poradi||0);});
 }
+function stavbyVisible(){return stavbyOrdered().filter(function(o){return SHOW_ARCHIV||!o.s.archiv;});}
+function allDone(sid){var a=zbvOrdered(sid);if(!a.length)return false;return a.every(function(o){var s=effStav(o.z);return s==='hotovo'||s==='fakturovano';});}
 function zbvOrdered(sid){
   var m=DATA.zbv[sid]||{};
   return Object.keys(m).map(function(zid){return {zid:zid,z:m[zid]};});
@@ -419,6 +426,7 @@ function renderTabulka(){
   var head='<div class="shead"><div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">'
     +'<div class="nazev">'+esc(s.nazev||sid)+(s.cislo?'<span class="cislo">č. '+esc(s.cislo)+'</span>':'')+'</div>'
     +'<button class="btn" data-eds="'+sid+'" style="margin-left:auto">✏️ upravit stavbu</button>'
+    +'<button class="btn" data-arch="'+sid+'">'+(s.archiv?'↩️ vrátit z archivu':(allDone(sid)?'📦 uklidit (vše hotové)':'📦 uklidit'))+'</button>'
     +'<button class="btn btn-add" data-add="'+sid+'">+ ZBV</button></div>'
     +(s.info?'<div class="lide">'+esc(s.info)+'</div>':'')
     +'<div class="lide">'+lideHtml+'</div>'+metr+'</div>';
@@ -472,15 +480,17 @@ function zbvDetail(sid,zid,z){
 }
 function buildStavbySide(){
   var el=$('stavby-side');if(!el)return;var html='';
-  stavbyOrdered().forEach(function(o){
+  var archN=stavbyOrdered().filter(function(o){return o.s.archiv;}).length;
+  stavbyVisible().forEach(function(o){
     var c=statCounts(o.sid),t=c.total||1;
     function seg(k){return c[k]?'<i class="seg-'+k+'" style="width:'+(c[k]/t*100)+'%"></i>':'';}
     var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'';
-    html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+'" data-side="'+o.sid+'">'
-      +'<div class="nm">'+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
+    html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+(o.s.archiv?' arch':'')+'" data-side="'+o.sid+'">'
+      +'<div class="nm">'+(o.s.archiv?'📦 ':'')+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
       +'<div class="sub">'+(o.s.cislo?'č. '+esc(o.s.cislo):'')+(o.s.cislo&&pr?' · ':'')+(pr?'PŘ '+esc(pr):'')+'</div>'
       +'<div class="sb-bar">'+seg('bezprogresu')+seg('vproces')+seg('hotovo')+seg('fakturovano')+'</div></div>';
   });
+  if(archN)html+='<div class="sb-arch-btn" id="sb-arch">'+(SHOW_ARCHIV?'▾ skrýt archiv':'📦 Archiv ('+archN+')')+'</div>';
   el.innerHTML=html;
 }
 // ředitelský přehled — součty ZBV a peněz přes VŠECHNY stavby po stavech
@@ -489,7 +499,7 @@ function renderPrehled(){
   var agg={};STATES.forEach(function(s){agg[s[0]]={n:0,h:0};});
   var per=[];
   stavbyOrdered().forEach(function(o){
-    var row={sid:o.sid,nazev:o.s.nazev||o.sid,cislo:o.s.cislo||'',st:{bezprogresu:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0}},total:0,suma:0};
+    var row={sid:o.sid,nazev:o.s.nazev||o.sid,cislo:o.s.cislo||'',archiv:!!o.s.archiv,st:{bezprogresu:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0}},total:0,suma:0};
     zbvOrdered(o.sid).forEach(function(r){var stt=effStav(r.z),h=toNum(getVal(r.z,'hodnotaZBV'))||0;
       agg[stt].n++;agg[stt].h+=h;row.st[stt].n++;row.st[stt].h+=h;row.total++;row.suma+=h;});
     per.push(row);
@@ -502,7 +512,7 @@ function renderPrehled(){
   per.sort(function(a,b){return b.suma-a.suma;});
   per.forEach(function(r){if(!r.total)return;
     function cell(k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
-    html+='<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
+    html+='<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
       +'<td class="c">'+r.total+'</td>'+cell('vproces','vp')+cell('hotovo','ho')+cell('fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';
   });
   html+='</tbody></table></div>';
@@ -729,10 +739,17 @@ $('exp').addEventListener('click',exportCSV);
 $('view').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setView(b.getAttribute('data-v'));[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});});
 function setView(v){VIEW=v;document.querySelector('.cols').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('prehled').classList.toggle('hidden',v!=='prehled');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('legenda').classList.toggle('hidden',v==='schranka');if(v==='schranka')renderInbox();else if(v==='prehled')renderPrehled();else renderTabulka();}
 $('prehled').addEventListener('click',function(e){var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';setView('tabulka');[].forEach.call($('view').querySelectorAll('button'),function(x){x.classList.toggle('on',x.getAttribute('data-v')==='tabulka');});});
-$('stavby-side').addEventListener('click',function(e){var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
+function archiveStavba(sid){var s=DATA.stavby[sid];if(!s)return;s.archiv=!s.archiv;
+  if(db)db.ref('/stavby/'+sid+'/archiv').set(s.archiv?true:null);
+  if(s.archiv&&!SHOW_ARCHIV){var v=stavbyVisible();FILTER.stavba=v.length?v[0].sid:'';}
+  renderTabulka();}
+$('stavby-side').addEventListener('click',function(e){
+  if(e.target.closest('#sb-arch')){SHOW_ARCHIV=!SHOW_ARCHIV;buildStavbySide();return;}
+  var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
 $('list').addEventListener('click',function(e){
   var tg=e.target.closest('[data-toggle]');if(tg){var pt=tg.getAttribute('data-toggle').split('|');var kk=zbvKey(pt[0],pt[1]);EXPANDED[kk]=!EXPANDED[kk];renderTabulka();return;}
   var es=e.target.closest('[data-eds]');if(es){openEditStavba(es.getAttribute('data-eds'));return;}
+  var ar=e.target.closest('[data-arch]');if(ar){archiveStavba(ar.getAttribute('data-arch'));return;}
   var ed=e.target.closest('[data-ed]');if(ed){var p=ed.getAttribute('data-ed').split('|');openEditZbv(p[0],p[1]);return;}
   var ad=e.target.closest('[data-add]');if(ad){openNewZbv(ad.getAttribute('data-add'));return;}
   var dl=e.target.closest('[data-del]');if(dl){var p2=dl.getAttribute('data-del').split('|');delZbv(p2[0],p2[1]);return;}
