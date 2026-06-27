@@ -8,7 +8,7 @@
   :root{--bg:#ffffff;--card:#ffffff;--line:#e3e6eb;--txt:#1a1d21;--muted:#6b7280;
     --accent:#2563eb;--head:#f3f4f6;--title:#f7f8fa;--edit:#f5f6f8;
     --pos:#15803d;--neg:#dc2626;
-    --hotovo:#16a34a;--vproces:#d97706;--bezprogresu:#64748b;--fakturovano:#2563eb;}
+    --hotovo:#16a34a;--vproces:#d97706;--bezprogresu:#dc2626;--evidovano:#64748b;--fakturovano:#2563eb;}
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);-webkit-text-size-adjust:100%}
   header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -41,7 +41,7 @@
   .sb-item .sub{font-size:10.5px;color:var(--muted);margin:2px 0 7px}
   .sb-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#eceef1}
   .sb-bar i{display:block;height:100%}
-  .seg-bezprogresu{background:var(--bezprogresu)} .seg-vproces{background:var(--vproces)} .seg-hotovo{background:var(--hotovo)} .seg-fakturovano{background:var(--fakturovano)}
+  .seg-bezprogresu{background:var(--bezprogresu)} .seg-vproces{background:var(--vproces)} .seg-hotovo{background:var(--hotovo)} .seg-fakturovano{background:var(--fakturovano)} .seg-evidovano{background:var(--evidovano)}
   .sb-item.arch{opacity:.55} .sb-item.arch.on{opacity:1}
   .sb-arch-btn{font-size:11.5px;color:var(--muted);text-align:center;padding:8px;cursor:pointer;border:1px dashed var(--line);border-radius:8px;margin-top:4px;flex:0 0 auto}
   .sb-arch-btn:hover{background:var(--edit)}
@@ -53,6 +53,7 @@
   .fchip.on.f-hotovo{background:var(--hotovo);border-color:var(--hotovo)}
   .fchip.on.f-fakturovano{background:var(--fakturovano);border-color:var(--fakturovano)}
   .fchip.on.f-bezprogresu{background:var(--bezprogresu);border-color:var(--bezprogresu)}
+  .fchip.on.f-evidovano{background:var(--evidovano);border-color:var(--evidovano)}
   /* hlavička stavby */
   .shead{background:var(--title);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
   .shead .nazev{font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -65,7 +66,7 @@
   .smetric .ok{font-size:11px;color:var(--pos);font-weight:400} .smetric .warn{font-size:11px;color:var(--neg);font-weight:400}
   .smetric .sub-h{font-size:12px;font-weight:400;color:var(--muted)}
   .smetric.st-vproces{box-shadow:inset 4px 0 0 var(--vproces)} .smetric.st-hotovo{box-shadow:inset 4px 0 0 var(--hotovo)}
-  .smetric.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .smetric.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)}
+  .smetric.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .smetric.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)} .smetric.st-evidovano{box-shadow:inset 4px 0 0 var(--evidovano)}
   /* ZBV karty */
   .zcard{background:var(--card);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;overflow:hidden}
   .zhead{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;flex-wrap:wrap}
@@ -80,7 +81,8 @@
   .zstad{display:flex;align-items:center;gap:9px;padding:0 12px 10px;flex-wrap:wrap}
   .stadchip{font-size:12px;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font-weight:600}
   .st-vproces .stadchip{background:#fef3c7;color:#92400e} .st-hotovo .stadchip{background:#dcfce7;color:#166534}
-  .st-fakturovano .stadchip{background:#dbeafe;color:#1e40af} .st-bezprogresu .stadchip{background:#eef1f4;color:#475569}
+  .st-fakturovano .stadchip{background:#dbeafe;color:#1e40af} .st-bezprogresu .stadchip{background:#fee2e2;color:#991b1b} .st-evidovano .stadchip{background:#eef1f4;color:#475569}
+  .vazne-badge{font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:999px}
   .zwait{font-size:11.5px;color:var(--muted)} .zamt{margin-left:auto;font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
   .zamt .p{color:var(--pos)} .zamt .n{color:var(--neg)}
   /* časová osa (historie) */
@@ -105,6 +107,7 @@
   .ph-card{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--card)}
   .ph-card.st-vproces{box-shadow:inset 4px 0 0 var(--vproces)} .ph-card.st-hotovo{box-shadow:inset 4px 0 0 var(--hotovo)}
   .ph-card.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .ph-card.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)} .ph-card.ph-tot{box-shadow:inset 4px 0 0 var(--accent)}
+  .ph-card.st-evidovano{box-shadow:inset 4px 0 0 var(--evidovano)}
   .ph-card.ph-arch{box-shadow:inset 4px 0 0 var(--muted);background:var(--edit)}
   .ph-sep td{background:var(--edit);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
   .phc-l{font-size:12px;color:var(--muted)} .phc-n{font-size:21px;font-weight:800;margin-top:5px} .phc-h{font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums}
@@ -114,7 +117,7 @@
   .ph-tbl thead th{font-size:11px;color:var(--muted);background:var(--head)}
   .ph-tbl td.c{text-align:center} .ph-tbl td.cena{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .ph-row{cursor:pointer} .ph-row:hover td{background:#f1f3f5}
-  .ph-tbl .vp{color:#b45309} .ph-tbl .ho{color:#15803d} .ph-tbl .fa{color:#1d4ed8}
+  .ph-tbl .vp{color:#b45309} .ph-tbl .ho{color:#15803d} .ph-tbl .fa{color:#1d4ed8} .ph-tbl .bp{color:#dc2626;font-weight:700}
   @media(max-width:760px){
     .cols{flex-direction:column}
     #stavby-side{flex:none;width:100%;position:static;max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:4px}
@@ -122,7 +125,7 @@
     .sb-item{flex:0 0 180px}
   }
   .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
-  .b-hotovo{background:var(--hotovo)}.b-vproces{background:var(--vproces)}.b-bezprogresu{background:var(--bezprogresu)}.b-fakturovano{background:var(--fakturovano)}
+  .b-hotovo{background:var(--hotovo)}.b-vproces{background:var(--vproces)}.b-bezprogresu{background:var(--bezprogresu)}.b-fakturovano{background:var(--fakturovano)}.b-evidovano{background:var(--evidovano)}
   .stavba{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
   .stavba .title{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--title);display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .stavba .title .nazev{font-size:18px;font-weight:800;letter-spacing:.3px}
@@ -211,17 +214,19 @@
   <div class="toolbar" id="tb-tabulka">
     <input id="search" class="ctrl" placeholder="🔎 hledat ve vybrané stavbě (ZBV, SO, popis…)">
     <div class="fchips" id="f-stav">
-      <button class="fchip f-vproces" data-v="vproces">V procesu</button>
+      <button class="fchip f-evidovano" data-v="evidovano">Evidováno</button>
+      <button class="fchip f-vproces" data-v="vproces">V přípravě</button>
+      <button class="fchip f-bezprogresu" data-v="bezprogresu">Bez progresu (vázne)</button>
       <button class="fchip f-hotovo" data-v="hotovo">Hotovo</button>
       <button class="fchip f-fakturovano" data-v="fakturovano">Fakturováno</button>
-      <button class="fchip f-bezprogresu" data-v="bezprogresu">Bez progresu</button>
     </div>
     <button id="f-dul" class="btn">⚑ Jen důležité</button>
     <button id="exp" class="btn">⬇️ Export CSV</button>
   </div>
   <div class="legenda" id="legenda">Stav ZBV:
-    <span><i class="lg seg-bezprogresu"></i>bez progresu</span>
-    <span><i class="lg seg-vproces"></i>v procesu (rozpracováno)</span>
+    <span><i class="lg seg-evidovano"></i>evidováno (zatím nezačato)</span>
+    <span><i class="lg seg-vproces"></i>v přípravě</span>
+    <span><i class="lg seg-bezprogresu"></i>bez progresu (vázne 14+ dní)</span>
     <span><i class="lg seg-hotovo"></i>hotovo / schváleno</span>
     <span><i class="lg seg-fakturovano"></i>fakturováno</span>
   </div>
@@ -337,15 +342,27 @@ function zbvKey(sid,zid){return sid+'__'+zid;}
 function stavbaNm(s){return (s&&s.nazev)?s.nazev:'';}
 
 // odvozený stav (když není ručně nastaven)
+var VAZNE_DNI=14;  // ZBV bez pohybu déle než tolik dní = „bez progresu" (vázne)
+// nejnovější datum napříč všemi kroky → kolik dní se nepohnulo (null = žádné datum)
+function lastKrokDays(z){
+  var newest=null;
+  KROK_IDS.forEach(function(id){var v=getVal(z,id);if(!v)return;var ds=firstDate(v);if(!ds)return;
+    var m=ds.match(/(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{2,4})/);if(!m)return;var y=+m[3];if(y<100)y+=2000;
+    var t=new Date(y,(+m[2])-1,+m[1]).getTime();if(newest==null||t>newest)newest=t;});
+  if(newest==null)return null;
+  return Math.floor((Date.now()-newest)/86400000);
+}
 function effStav(z){
   if(z.stav)return z.stav;
   if(getVal(z,'vyfakturovano')||getVal(z,'fakturace')||getVal(z,'iposEdok')||getVal(z,'zadanoIPOS'))return 'fakturovano';
-  if(getVal(z,'podpisObjednatele')||getVal(z,'finalCistopis')||getVal(z,'pokynCistopis'))return 'hotovo'; // schváleno/podepsáno, ještě nefakturováno
+  if(getVal(z,'podpisObjednatele')||getVal(z,'finalCistopis')||getVal(z,'pokynCistopis'))return 'hotovo'; // schváleno/podepsáno
+  var dny=lastKrokDays(z);
+  if(dny!=null&&dny>VAZNE_DNI)return 'bezprogresu';   // vázne — 14+ dní bez pohybu (i v rozdělané fázi)
   var procesData=KROK_IDS.some(function(id){return COL_BY_ID[id].g!=='ozn'&&getVal(z,id);});
-  if(procesData)return 'vproces';
-  return 'bezprogresu';
+  if(procesData)return 'vproces';   // v přípravě (čerstvě se hýbe)
+  return 'evidovano';               // zatím jen zaevidováno / oznámeno, nezačato
 }
-var STAV_LBL={hotovo:'Hotovo',vproces:'V procesu',bezprogresu:'Bez progresu',fakturovano:'Fakturováno'};
+var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Bez progresu',hotovo:'Hotovo',fakturovano:'Fakturováno'};
 
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{}};
@@ -396,7 +413,7 @@ function sumStavba(sid){
 }
 // počty ZBV po stavech (pro panel i hlavičku)
 function statCounts(sid){
-  var c={bezprogresu:0,vproces:0,hotovo:0,fakturovano:0,total:0};
+  var c={evidovano:0,bezprogresu:0,vproces:0,hotovo:0,fakturovano:0,total:0};
   zbvOrdered(sid).forEach(function(o){c.total++;var st=effStav(o.z);c[st]=(c[st]||0)+1;});
   return c;
 }
@@ -419,7 +436,7 @@ function firstDate(s){var m=String(s).match(/\d{1,2}\.\s?\d{1,2}\.\s?\d{2,4}/);r
 function zbvBadge(z){var v=String(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'');if(!v)return '—';return /^\d+$/.test(v)?(v.length>=3?v:('000'+v).slice(-3)):v;}
 function zbvSort(z){var v=String(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'');var m=v.match(/\d+/);return m?parseInt(m[0],10):99999;}
 // peníze po stavech v rámci jedné stavby
-function statMoney(sid){var sm={vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0},bezprogresu:{n:0,h:0}};
+function statMoney(sid){var sm={evidovano:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0},bezprogresu:{n:0,h:0}};
   zbvOrdered(sid).forEach(function(o){var st=effStav(o.z),h=toNum(getVal(o.z,'hodnotaZBV'))||0;sm[st].n++;sm[st].h+=h;});return sm;}
 function upd(){$('updated').textContent='M - SILNICE a.s. · staveb: '+Object.keys(DATA.stavby).length+' · aktualizováno: '+(DATA.meta&&DATA.meta.updatedAt?DATA.meta.updatedAt:'—');}
 
@@ -439,7 +456,7 @@ function renderTabulka(){
   if(L.l5!=null)metr+='<div class="smetric"><div class="l">Limit sk. 5 · 15 %</div><div class="v">'+fmtNum(L.l5)+' <span class="'+(L.cer5<=L.l5?'ok':'warn')+'">zbývá '+fmtNum(L.l5-L.cer5)+'</span></div></div>';
   metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
   // součty po stavech v této stavbě (počet · peníze)
-  var STS=[['vproces','V procesu'],['hotovo','Hotovo'],['fakturovano','Fakturováno'],['bezprogresu','Bez progresu']];
+  var STS=[['evidovano','Evidováno'],['vproces','V přípravě'],['bezprogresu','Bez progresu (vázne)'],['hotovo','Hotovo'],['fakturovano','Fakturováno']];
   var smet2='<div class="smetrics">'+STS.map(function(p){return '<div class="smetric st-'+p[0]+'"><div class="l">'+p[1]+'</div><div class="v">'+sm[p[0]].n+' <span class="sub-h">'+fmtNum(sm[p[0]].h)+' Kč</span></div></div>';}).join('')+'</div>';
   var archBtn=s.archiv?'↩️ vrátit z archivu':(allDone(sid)?'📦 Uklidit do archivu (vše vyfakturováno)':'📦 Uklidit do archivu');
   var head='<div class="shead"><div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">'
@@ -464,9 +481,11 @@ function zbvCard(sid,zid,z){
   var amt='';var kl=fmtNum(getVal(z,'zmenyKladne')),zp=toNum(getVal(z,'zmenyZaporne'));
   if(kl)amt+='<span class="p">+'+kl+'</span> ';if(zp)amt+='<span class="n">−'+fmtNum(Math.abs(zp))+'</span>';
   var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
-  var stadHtml=sd.done
+  var dny=lastKrokDays(z);
+  var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⚠ vázne '+dny+' dní</span>':'';
+  var stadHtml=(sd.done
     ?'<span class="stadchip">'+esc(sd.doneLab)+(firstDate(sd.doneVal)?' · '+firstDate(sd.doneVal):'')+'</span>'+(sd.nextLab?'<span class="zwait">další: '+esc(sd.nextLab)+'</span>':'')
-    :'<span class="stadchip">zatím bez kroků — jen evidováno</span>';
+    :'<span class="stadchip">zatím bez kroků — jen evidováno</span>')+vazne;
   var h='<div class="zcard st-'+st+(open?' open':'')+(dul?' dul':'')+'">'
     +'<div class="zhead" data-toggle="'+sid+'|'+zid+'">'
       +'<button class="pin'+(dul?' on':'')+'" data-star="'+key+'" title="důležité / sledovat">'+(dul?'⚑':'⚐')+'</button>'
@@ -507,19 +526,19 @@ function buildStavbySide(){
     html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+(o.s.archiv?' arch':'')+'" data-side="'+o.sid+'">'
       +'<div class="nm">'+(o.s.archiv?'📦 ':'')+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
       +'<div class="sub">'+(o.s.cislo?'č. '+esc(o.s.cislo):'')+(o.s.cislo&&pr?' · ':'')+(pr?'PŘ '+esc(pr):'')+'</div>'
-      +'<div class="sb-bar">'+seg('bezprogresu')+seg('vproces')+seg('hotovo')+seg('fakturovano')+'</div></div>';
+      +'<div class="sb-bar">'+seg('evidovano')+seg('vproces')+seg('bezprogresu')+seg('hotovo')+seg('fakturovano')+'</div></div>';
   });
   if(archN)html+='<div class="sb-arch-btn" id="sb-arch">'+(SHOW_ARCHIV?'▾ skrýt archiv':'📦 Archiv ('+archN+')')+'</div>';
   el.innerHTML=html;
 }
 // ředitelský přehled — součty ZBV a peněz přes VŠECHNY stavby po stavech
 function renderPrehled(){
-  var STATES=[['vproces','V procesu (rozpracováno)'],['hotovo','Hotovo (schváleno)'],['fakturovano','Fakturováno'],['bezprogresu','Bez progresu']];
+  var STATES=[['evidovano','Evidováno'],['vproces','V přípravě (rozpracováno)'],['bezprogresu','Bez progresu (vázne)'],['hotovo','Hotovo (schváleno)'],['fakturovano','Fakturováno']];
   var agg={};STATES.forEach(function(s){agg[s[0]]={n:0,h:0};});
   var arch={n:0,h:0,stavby:0};   // archiv (dokončené) — počítá se ZVLÁŠŤ, ne do aktivních
   var per=[];
   stavbyOrdered().forEach(function(o){
-    var row={sid:o.sid,nazev:o.s.nazev||o.sid,cislo:o.s.cislo||'',archiv:!!o.s.archiv,st:{bezprogresu:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0}},total:0,suma:0};
+    var row={sid:o.sid,nazev:o.s.nazev||o.sid,cislo:o.s.cislo||'',archiv:!!o.s.archiv,st:{evidovano:{n:0,h:0},bezprogresu:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0}},total:0,suma:0};
     zbvOrdered(o.sid).forEach(function(r){var stt=effStav(r.z),h=toNum(getVal(r.z,'hodnotaZBV'))||0;
       row.st[stt].n++;row.st[stt].h+=h;row.total++;row.suma+=h;
       if(o.s.archiv){arch.n++;arch.h+=h;}else{agg[stt].n++;agg[stt].h+=h;}});
@@ -532,14 +551,14 @@ function renderPrehled(){
   STATES.forEach(function(s){html+='<div class="ph-card st-'+s[0]+'"><div class="phc-l">'+s[1]+'</div><div class="phc-n">'+agg[s[0]].n+' ZBV</div><div class="phc-h">'+fmtNum(agg[s[0]].h)+' Kč</div></div>';});
   html+='<div class="ph-card ph-tot"><div class="phc-l">Celkem (aktivní)</div><div class="phc-n">'+totN+' ZBV</div><div class="phc-h">'+fmtNum(totH)+' Kč</div></div></div>';
   if(arch.stavby)html+='<div class="ph-cards"><div class="ph-card ph-arch"><div class="phc-l">📦 Archiv — dokončené (počítá se zvlášť)</div><div class="phc-n">'+arch.stavby+' staveb · '+arch.n+' ZBV</div><div class="phc-h">'+fmtNum(arch.h)+' Kč</div></div></div>';
-  html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V procesu</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
+  html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V přípravě</th><th>Vázne</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
   function cell(r,k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
   function rowHtml(r){return '<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
-      +'<td class="c">'+r.total+'</td>'+cell(r,'vproces','vp')+cell(r,'hotovo','ho')+cell(r,'fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';}
+      +'<td class="c">'+r.total+'</td>'+cell(r,'vproces','vp')+cell(r,'bezprogresu','bp')+cell(r,'hotovo','ho')+cell(r,'fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';}
   var active=per.filter(function(r){return !r.archiv&&r.total;}).sort(function(a,b){return b.suma-a.suma;});
   var arr=per.filter(function(r){return r.archiv&&r.total;}).sort(function(a,b){return b.suma-a.suma;});
   active.forEach(function(r){html+=rowHtml(r);});
-  if(arr.length){html+='<tr class="ph-sep"><td colspan="6">📦 Archiv — dokončené stavby (mimo součty nahoře)</td></tr>';arr.forEach(function(r){html+=rowHtml(r);});}
+  if(arr.length){html+='<tr class="ph-sep"><td colspan="7">📦 Archiv — dokončené stavby (mimo součty nahoře)</td></tr>';arr.forEach(function(r){html+=rowHtml(r);});}
   html+='</tbody></table></div>';
   $('prehled').innerHTML=html;upd();
 }
