@@ -105,6 +105,8 @@
   .ph-card{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--card)}
   .ph-card.st-vproces{box-shadow:inset 4px 0 0 var(--vproces)} .ph-card.st-hotovo{box-shadow:inset 4px 0 0 var(--hotovo)}
   .ph-card.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .ph-card.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)} .ph-card.ph-tot{box-shadow:inset 4px 0 0 var(--accent)}
+  .ph-card.ph-arch{box-shadow:inset 4px 0 0 var(--muted);background:var(--edit)}
+  .ph-sep td{background:var(--edit);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
   .phc-l{font-size:12px;color:var(--muted)} .phc-n{font-size:21px;font-weight:800;margin-top:5px} .phc-h{font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums}
   .ph-tbl-wrap{overflow-x:auto}
   .ph-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
@@ -514,24 +516,30 @@ function buildStavbySide(){
 function renderPrehled(){
   var STATES=[['vproces','V procesu (rozpracováno)'],['hotovo','Hotovo (schváleno)'],['fakturovano','Fakturováno'],['bezprogresu','Bez progresu']];
   var agg={};STATES.forEach(function(s){agg[s[0]]={n:0,h:0};});
+  var arch={n:0,h:0,stavby:0};   // archiv (dokončené) — počítá se ZVLÁŠŤ, ne do aktivních
   var per=[];
   stavbyOrdered().forEach(function(o){
     var row={sid:o.sid,nazev:o.s.nazev||o.sid,cislo:o.s.cislo||'',archiv:!!o.s.archiv,st:{bezprogresu:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0}},total:0,suma:0};
     zbvOrdered(o.sid).forEach(function(r){var stt=effStav(r.z),h=toNum(getVal(r.z,'hodnotaZBV'))||0;
-      agg[stt].n++;agg[stt].h+=h;row.st[stt].n++;row.st[stt].h+=h;row.total++;row.suma+=h;});
+      row.st[stt].n++;row.st[stt].h+=h;row.total++;row.suma+=h;
+      if(o.s.archiv){arch.n++;arch.h+=h;}else{agg[stt].n++;agg[stt].h+=h;}});
+    if(o.s.archiv&&row.total)arch.stavby++;
     per.push(row);
   });
   var totN=0,totH=0;STATES.forEach(function(s){totN+=agg[s[0]].n;totH+=agg[s[0]].h;});
-  var html='<div class="ph-head">Ředitelský přehled — všechny stavby ('+Object.keys(DATA.stavby).length+')</div><div class="ph-cards">';
+  var nActive=Object.keys(DATA.stavby).filter(function(sid){return !DATA.stavby[sid].archiv;}).length;
+  var html='<div class="ph-head">Ředitelský přehled — aktivní stavby ('+nActive+')</div><div class="ph-cards">';
   STATES.forEach(function(s){html+='<div class="ph-card st-'+s[0]+'"><div class="phc-l">'+s[1]+'</div><div class="phc-n">'+agg[s[0]].n+' ZBV</div><div class="phc-h">'+fmtNum(agg[s[0]].h)+' Kč</div></div>';});
-  html+='<div class="ph-card ph-tot"><div class="phc-l">Celkem</div><div class="phc-n">'+totN+' ZBV</div><div class="phc-h">'+fmtNum(totH)+' Kč</div></div></div>';
+  html+='<div class="ph-card ph-tot"><div class="phc-l">Celkem (aktivní)</div><div class="phc-n">'+totN+' ZBV</div><div class="phc-h">'+fmtNum(totH)+' Kč</div></div></div>';
+  if(arch.stavby)html+='<div class="ph-cards"><div class="ph-card ph-arch"><div class="phc-l">📦 Archiv — dokončené (počítá se zvlášť)</div><div class="phc-n">'+arch.stavby+' staveb · '+arch.n+' ZBV</div><div class="phc-h">'+fmtNum(arch.h)+' Kč</div></div></div>';
   html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V procesu</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
-  per.sort(function(a,b){return b.suma-a.suma;});
-  per.forEach(function(r){if(!r.total)return;
-    function cell(k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
-    html+='<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
-      +'<td class="c">'+r.total+'</td>'+cell('vproces','vp')+cell('hotovo','ho')+cell('fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';
-  });
+  function cell(r,k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
+  function rowHtml(r){return '<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
+      +'<td class="c">'+r.total+'</td>'+cell(r,'vproces','vp')+cell(r,'hotovo','ho')+cell(r,'fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';}
+  var active=per.filter(function(r){return !r.archiv&&r.total;}).sort(function(a,b){return b.suma-a.suma;});
+  var arr=per.filter(function(r){return r.archiv&&r.total;}).sort(function(a,b){return b.suma-a.suma;});
+  active.forEach(function(r){html+=rowHtml(r);});
+  if(arr.length){html+='<tr class="ph-sep"><td colspan="6">📦 Archiv — dokončené stavby (mimo součty nahoře)</td></tr>';arr.forEach(function(r){html+=rowHtml(r);});}
   html+='</tbody></table></div>';
   $('prehled').innerHTML=html;upd();
 }
