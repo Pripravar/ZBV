@@ -32,6 +32,7 @@
   /* layout 2 sloupce: levý panel + obsah */
   .cols{display:flex;gap:12px;align-items:flex-start}
   #stavby-side{flex:0 0 236px;display:flex;flex-direction:column;gap:5px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:92px}
+  .sb-sort{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--txt);font-size:12px;margin-bottom:2px}
   #list{flex:1;min-width:0}
   .sb-search{width:100%;background:var(--edit);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;margin-bottom:3px}
   .sb-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
@@ -122,6 +123,7 @@
     .cols{flex-direction:column}
     #stavby-side{flex:none;width:100%;position:static;max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:4px}
     #stavby-side .sb-search{display:none}
+    #stavby-side .sb-sort{flex:0 0 150px;width:150px;margin-bottom:0;align-self:center}
     .sb-item{flex:0 0 180px}
   }
   .badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
@@ -367,6 +369,7 @@ var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Bez pr
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{}};
 var FILTER={q:'',stavba:'',stav:{},dulezite:false};   // stav = množina aktivních stavů ({} = vše)
+var SB_SORT='poradi';   // řazení staveb v levém panelu
 var VIEW='tabulka';
 var STAVBA_INIT=false;
 var EXPANDED={};   // rozbalené ZBV karty (klíč zbvKey)
@@ -375,9 +378,27 @@ var PHASE_LBL={ozn:'Oznámení',proces:'Proces ZBV',fakt:'Fakturace'};
 var db=null,auth=null,started=false;
 
 // ╔══════════════════════ RENDER TABULKY ══════════════════════╗
+function cmpTxt(a,b){return String(a||'￿').localeCompare(String(b||'￿'),'cs',{numeric:true,sensitivity:'base'});}
+// reprezentativní řešitel stavby = nejčastější řešitel napříč jejími ZBV
+function stavbaResitel(sid){
+  var m={},best='',bc=0,zm=(DATA.zbv&&DATA.zbv[sid])||{};
+  Object.keys(zm).forEach(function(zid){var r=getVal(zm[zid],'resitel');if(!r)return;m[r]=(m[r]||0)+1;if(m[r]>bc){bc=m[r];best=r;}});
+  return best;
+}
 function stavbyOrdered(){
-  return Object.keys(DATA.stavby).map(function(sid){var s=DATA.stavby[sid];return {sid:sid,s:s};})
-    .sort(function(a,b){return (a.s.poradi||0)-(b.s.poradi||0);});
+  var arr=Object.keys(DATA.stavby).map(function(sid){var s=DATA.stavby[sid];return {sid:sid,s:s};});
+  var L=function(o){return (o.s.lide)||{};};
+  switch(SB_SORT){
+    case 'cislo-asc':   arr.sort(function(a,b){return cmpTxt(a.s.cislo,b.s.cislo);}); break;
+    case 'cislo-desc':  arr.sort(function(a,b){return cmpTxt(b.s.cislo,a.s.cislo);}); break;
+    case 'nazev-asc':   arr.sort(function(a,b){return cmpTxt(a.s.nazev,b.s.nazev);}); break;
+    case 'nazev-desc':  arr.sort(function(a,b){return cmpTxt(b.s.nazev,a.s.nazev);}); break;
+    case 'resitel':     arr.sort(function(a,b){return cmpTxt(stavbaResitel(a.sid),stavbaResitel(b.sid));}); break;
+    case 'pripravar':   arr.sort(function(a,b){return cmpTxt(L(a).pripravar,L(b).pripravar);}); break;
+    case 'stavbyvedouci':arr.sort(function(a,b){return cmpTxt(L(a).stavbyvedouci,L(b).stavbyvedouci);}); break;
+    default:            arr.sort(function(a,b){return (a.s.poradi||0)-(b.s.poradi||0);});
+  }
+  return arr;
 }
 function stavbyVisible(){return stavbyOrdered().filter(function(o){return SHOW_ARCHIV||!o.s.archiv;});}
 function allDone(sid){var a=zbvOrdered(sid);if(!a.length)return false;return a.every(function(o){var s=effStav(o.z);return s==='hotovo'||s==='fakturovano';});}
@@ -438,7 +459,7 @@ function zbvSort(z){var v=String(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')
 // peníze po stavech v rámci jedné stavby
 function statMoney(sid){var sm={evidovano:{n:0,h:0},vproces:{n:0,h:0},hotovo:{n:0,h:0},fakturovano:{n:0,h:0},bezprogresu:{n:0,h:0}};
   zbvOrdered(sid).forEach(function(o){var st=effStav(o.z),h=toNum(getVal(o.z,'hodnotaZBV'))||0;sm[st].n++;sm[st].h+=h;});return sm;}
-function upd(){$('updated').textContent='M - SILNICE a.s. · staveb: '+Object.keys(DATA.stavby).length+' · aktualizováno: '+(DATA.meta&&DATA.meta.updatedAt?DATA.meta.updatedAt:'—');}
+function upd(){$('updated').textContent='M - SILNICE a.s. · OZ JIH a MOSTY – ZÁPAD · staveb: '+Object.keys(DATA.stavby).length+' · aktualizováno: '+(DATA.meta&&DATA.meta.updatedAt?DATA.meta.updatedAt:'—');}
 
 function renderTabulka(){
   var _ord=stavbyOrdered();
@@ -518,6 +539,8 @@ function zbvDetail(sid,zid,z){
 }
 function buildStavbySide(){
   var el=$('stavby-side');if(!el)return;var html='';
+  var SORTS=[['poradi','Řadit: výchozí'],['cislo-asc','Číslo ↑'],['cislo-desc','Číslo ↓'],['nazev-asc','Název A→Z'],['nazev-desc','Název Z→A'],['resitel','Řešitel ZBV'],['pripravar','Přípravář'],['stavbyvedouci','Stavbyvedoucí']];
+  html+='<select id="sb-sort" class="sb-sort" title="Řazení staveb">'+SORTS.map(function(o){return '<option value="'+o[0]+'"'+(SB_SORT===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
   var archN=stavbyOrdered().filter(function(o){return o.s.archiv;}).length;
   stavbyVisible().forEach(function(o){
     var c=statCounts(o.sid),t=c.total||1;
@@ -789,6 +812,8 @@ function archiveStavba(sid){var s=DATA.stavby[sid];if(!s)return;
   if(db)db.ref('/stavby/'+sid+'/archiv').set(s.archiv?true:null);
   if(s.archiv&&!SHOW_ARCHIV){var v=stavbyVisible();FILTER.stavba=v.length?v[0].sid:'';}
   renderTabulka();}
+$('stavby-side').addEventListener('change',function(e){
+  if(e.target.id==='sb-sort'){SB_SORT=e.target.value;buildStavbySide();}});
 $('stavby-side').addEventListener('click',function(e){
   if(e.target.closest('#sb-arch')){SHOW_ARCHIV=!SHOW_ARCHIV;buildStavbySide();return;}
   var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
