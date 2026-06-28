@@ -466,6 +466,7 @@ var SKRYT_VYRESENE=false;   // zápis z porad — skrýt vyřešené body
 var SEKCE_SORT='poradi';    // řazení sekcí (staveb) v zápisu z porad
 var PRIO_ONLY=false;        // zápis — jen prioritní body
 var POR_MODE='prubezne';    // 'prubezne' = průběžný zápis po stavbách | 'porady' = porady po datech
+var RESITEL_FILTER='';      // filtr „jen stavby řešitele X" (panel + průběžný zápis), '' = vše
 var VIEW='tabulka';
 var STAVBA_INIT=false;
 var EXPANDED={};   // rozbalené ZBV karty (klíč zbvKey)
@@ -498,7 +499,15 @@ function stavbyOrdered(){
   }
   return arr;
 }
-function stavbyVisible(){return stavbyOrdered().filter(function(o){return SHOW_ARCHIV||!o.s.archiv;});}
+function stavbyVisible(){return stavbyOrdered().filter(function(o){
+  if(!SHOW_ARCHIV&&o.s.archiv)return false;
+  if(RESITEL_FILTER&&stavbaResitel(o.sid)!==RESITEL_FILTER)return false;
+  return true;});}
+function resiteleList(){var set={};Object.keys(DATA.stavby).forEach(function(sid){var r=stavbaResitel(sid);if(r)set[r]=1;});
+  return Object.keys(set).sort(function(a,b){return cmpTxt(a,b);});}
+function resitelSelHtml(id){var rl=resiteleList();if(!rl.length&&!RESITEL_FILTER)return '';
+  return '<select id="'+id+'" class="sb-sort" title="Filtr podle řešitele ZBV"><option value="">Řešitel: vše</option>'
+    +rl.map(function(r){return '<option value="'+esc(r)+'"'+(RESITEL_FILTER===r?' selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select>';}
 function allDone(sid){var a=zbvOrdered(sid);if(!a.length)return false;return a.every(function(o){var s=effStav(o.z);return s==='hotovo'||s==='fakturovano';});}
 function zbvOrdered(sid){
   var m=DATA.zbv[sid]||{};
@@ -641,6 +650,7 @@ function buildStavbySide(){
   var el=$('stavby-side');if(!el)return;var html='';
   var SORTS=[['poradi','Řadit: výchozí'],['cislo-asc','Číslo ↑'],['cislo-desc','Číslo ↓'],['nazev-asc','Název A→Z'],['nazev-desc','Název Z→A'],['resitel','Řešitel ZBV'],['pripravar','Přípravář'],['stavbyvedouci','Stavbyvedoucí']];
   html+='<select id="sb-sort" class="sb-sort" title="Řazení staveb">'+SORTS.map(function(o){return '<option value="'+o[0]+'"'+(SB_SORT===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';
+  html+=resitelSelHtml('sb-resitel');
   var archN=stavbyOrdered().filter(function(o){return o.s.archiv;}).length;
   stavbyVisible().forEach(function(o){
     var c=statCounts(o.sid),t=c.total||1;
@@ -885,11 +895,11 @@ function odpOrdered(b){var o=b.odpovedi||{};return Object.keys(o).map(function(o
 function zapMaxPoradi(){var m=0;sekceOrdered(zapEnsure()).forEach(function(o){if((o.s.poradi||0)>m)m=o.s.poradi||0;});return m;}
 function renderZapis(){
   var el=$('porady');if(!el)return;var Z=zapEnsure();
-  var seks=sekceSorted(Z);
+  var seks=sekceSorted(Z).filter(function(o){if(!RESITEL_FILTER)return true;var id=secStavbaId(o.s);return id&&stavbaResitel(id)===RESITEL_FILTER;});
   var open=0,prio=0;seks.forEach(function(o){bodyByTime(o.s).forEach(function(x){if(!x.b.done)open++;if(x.b.prio&&!x.b.done)prio++;});});
   var h='<div class="por-top"><div class="por-h">📋 Průběžný zápis po stavbách'
     +'<span class="por-sub">'+seks.length+' staveb · '+open+' otevřených'+(prio?' · <b class="por-priocnt">⚑ '+prio+' priorit</b>':'')+'</span></div>'
-    +'<div class="por-tools">'+porSortSelHtml()
+    +'<div class="por-tools">'+porSortSelHtml()+resitelSelHtml('zap-resitel')
     +'<button class="btn'+(PRIO_ONLY?' on':'')+'" id="por-prio">⚑ jen priority</button>'
     +'<button class="btn" id="por-skryt">'+(SKRYT_VYRESENE?'☑ vyřešené skryté':'☐ skrýt vyřešené')+'</button>'
     +'<button class="btn" id="por-print">🖨️ Tisk</button></div></div>';
@@ -1245,7 +1255,8 @@ function archiveStavba(sid){var s=DATA.stavby[sid];if(!s)return;
   if(s.archiv&&!SHOW_ARCHIV){var v=stavbyVisible();FILTER.stavba=v.length?v[0].sid:'';}
   renderTabulka();}
 $('stavby-side').addEventListener('change',function(e){
-  if(e.target.id==='sb-sort'){SB_SORT=e.target.value;buildStavbySide();}});
+  if(e.target.id==='sb-sort'){SB_SORT=e.target.value;buildStavbySide();return;}
+  if(e.target.id==='sb-resitel'){RESITEL_FILTER=e.target.value;buildStavbySide();}});
 $('stavby-side').addEventListener('click',function(e){
   if(e.target.closest('#sb-arch')){SHOW_ARCHIV=!SHOW_ARCHIV;buildStavbySide();return;}
   var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
@@ -1302,6 +1313,7 @@ $('porady').addEventListener('click',function(e){
 });
 $('porady').addEventListener('change',function(e){
   if(e.target.id==='por-sort'){SEKCE_SORT=e.target.value;renderPorady();return;}
+  if(e.target.id==='zap-resitel'){RESITEL_FILTER=e.target.value;renderPorady();return;}
   var pk=e.target.closest('[data-ppick]');if(pk&&e.target.value){porAddStavba(pk.getAttribute('data-ppick'),e.target.value);return;}
   if(e.target.closest('[data-zpick]')&&e.target.value){zapAddStavba(e.target.value);return;}
 });
