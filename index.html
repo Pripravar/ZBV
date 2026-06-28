@@ -692,7 +692,7 @@ function stavbyPickHtml(attr){var stOpts=Object.keys(DATA.stavby).map(function(s
   .filter(function(o){return !o.s.archiv;}).sort(function(a,b){return cmpTxt(a.s.nazev,b.s.nazev);})
   .map(function(o){return '<option value="'+o.sid+'">'+esc(o.s.nazev||o.sid)+(o.s.cislo?' (č. '+esc(o.s.cislo)+')':'')+'</option>';}).join('');
   return '<select class="psek-pick" '+attr+'><option value="">+ přidat stavbu…</option>'+stOpts+'</select>';}
-function renderPorady(){var el=$('porady');if(!el)return;if(POR_MODE==='porady')renderPoradyDated();else renderZapis();}
+function renderPorady(){var el=$('porady');if(!el)return;renderZapis();}
 function renderPoradyDated(){
   var el=$('porady');if(!el)return;
   var list=poradyOrdered();
@@ -878,7 +878,7 @@ function renderZapis(){
   var el=$('porady');if(!el)return;var Z=zapEnsure();
   var seks=sekceSorted(Z);
   var open=0,prio=0;seks.forEach(function(o){bodyByTime(o.s).forEach(function(x){if(!x.b.done)open++;if(x.b.prio&&!x.b.done)prio++;});});
-  var h=modeSwitchHtml()+'<div class="por-top"><div class="por-h">📋 Průběžný zápis po stavbách'
+  var h='<div class="por-top"><div class="por-h">📋 Průběžný zápis po stavbách'
     +'<span class="por-sub">'+seks.length+' staveb · '+open+' otevřených'+(prio?' · <b class="por-priocnt">⚑ '+prio+' priorit</b>':'')+'</span></div>'
     +'<div class="por-tools">'+porSortSelHtml()
     +'<button class="btn'+(PRIO_ONLY?' on':'')+'" id="por-prio">⚑ jen priority</button>'
