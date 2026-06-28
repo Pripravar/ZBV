@@ -566,7 +566,7 @@ function renderTabulka(){
   var sid=FILTER.stavba,s=DATA.stavby[sid];
   if(!sid||!s){$('list').innerHTML='<div class="empty">Vyber stavbu v panelu vlevo.</div>';upd();return;}
   // hlavička stavby (lidé + limity)
-  var ROLES=[['stavbyvedouci','SV'],['pripravar','PŘ'],['objednatel','OBJ'],['AD','AD'],['TDI','TDI'],['CM','CM']];
+  var ROLES=[['resitel','Řešitel ZBV'],['stavbyvedouci','SV'],['pripravar','PŘ'],['objednatel','OBJ'],['AD','AD'],['TDI','TDI'],['CM','CM']];
   var lideHtml=ROLES.map(function(p){return p[1]+': <b>'+esc((s.lide&&s.lide[p[0]])||'—')+'</b>';}).join(' · ');
   var L=limity(s,sid),sc=statCounts(sid),sm=statMoney(sid);
   var metr='<div class="smetrics">';
@@ -645,10 +645,11 @@ function buildStavbySide(){
   stavbyVisible().forEach(function(o){
     var c=statCounts(o.sid),t=c.total||1;
     function seg(k){return c[k]?'<i class="seg-'+k+'" style="width:'+(c[k]/t*100)+'%"></i>':'';}
-    var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'';
+    var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'',re=stavbaResitel(o.sid);
+    var subP=[];if(o.s.cislo)subP.push('č. '+esc(o.s.cislo));if(re)subP.push('Ř '+esc(re));if(pr)subP.push('PŘ '+esc(pr));
     html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+(o.s.archiv?' arch':'')+'" data-side="'+o.sid+'">'
       +'<div class="nm">'+(o.s.archiv?'📦 ':'')+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
-      +'<div class="sub">'+(o.s.cislo?'č. '+esc(o.s.cislo):'')+(o.s.cislo&&pr?' · ':'')+(pr?'PŘ '+esc(pr):'')+'</div>'
+      +'<div class="sub">'+subP.join(' · ')+'</div>'
       +'<div class="sb-bar">'+seg('evidovano')+seg('vproces')+seg('bezprogresu')+seg('hotovo')+seg('fakturovano')+'</div></div>';
   });
   if(archN)html+='<div class="sb-arch-btn" id="sb-arch">'+(SHOW_ARCHIV?'▾ skrýt archiv':'📦 Archiv ('+archN+')')+'</div>';
