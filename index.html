@@ -135,6 +135,10 @@
   .psek-x{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:6px;visibility:hidden}
   .psek:hover .psek-x{visibility:visible} .psek-x:hover{color:var(--neg)}
   .psek-hint{font-size:10.5px;color:var(--muted);background:var(--edit);border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .psek-res{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .psek-resi{font-size:11px;width:84px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--card);color:var(--accent);font-weight:600}
+  .psek-resi:focus{outline:none;border-color:var(--accent)}
+  .psek-resi::placeholder{color:var(--muted);font-weight:400}
   .psek-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
   .psek-pick{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;background:var(--card);color:var(--txt);max-width:240px}
   .psek-add{background:none;border:1px dashed var(--line);color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;border-radius:7px;padding:5px 11px}
@@ -473,6 +477,8 @@ var db=null,auth=null,started=false;
 function cmpTxt(a,b){return String(a||'￿').localeCompare(String(b||'￿'),'cs',{numeric:true,sensitivity:'base'});}
 // reprezentativní řešitel stavby = nejčastější řešitel napříč jejími ZBV
 function stavbaResitel(sid){
+  var s=DATA.stavby[sid]||{};
+  if(s.lide&&s.lide.resitel)return s.lide.resitel;   // ručně nastavený řešitel stavby má přednost
   var m={},best='',bc=0,zm=(DATA.zbv&&DATA.zbv[sid])||{};
   Object.keys(zm).forEach(function(zid){var r=getVal(zm[zid],'resitel');if(!r)return;m[r]=(m[r]||0)+1;if(m[r]>bc){bc=m[r];best=r;}});
   return best;
@@ -665,6 +671,8 @@ function matchStavbaName(text){var t=deburr(text);if(!t)return null;var found=nu
 function secStavbaId(sek){if(sek.stavbaId&&DATA.stavby[sek.stavbaId])return sek.stavbaId;return matchStavbaName(sek.akce);}
 function secHint(sek){var id=secStavbaId(sek);if(!id)return '';var s=DATA.stavby[id]||{},sv=s.lide&&s.lide.stavbyvedouci,r=stavbaResitel(id),parts=[];
   if(s.cislo)parts.push('č. '+s.cislo);if(sv)parts.push('SV '+sv);if(r)parts.push('řeší '+r);return parts.join(' · ');}
+function secHintBase(sek){var id=secStavbaId(sek);if(!id)return '';var s=DATA.stavby[id]||{},sv=s.lide&&s.lide.stavbyvedouci,parts=[];
+  if(s.cislo)parts.push('č. '+s.cislo);if(sv)parts.push('SV '+sv);return parts.join(' · ');}
 function secSortKey(sek,mode){var id=secStavbaId(sek),s=id?DATA.stavby[id]:null;
   if(mode==='nazev')return s?s.nazev:sek.akce;
   if(mode==='cislo')return s?s.cislo:sek.akce;
@@ -892,9 +900,10 @@ function renderZapis(){
   seks.forEach(function(so){
     var bods=bodyByTime(so.s).filter(function(x){return !(x.b.done&&SKRYT_VYRESENE)&&(!PRIO_ONLY||x.b.prio);});
     if((SKRYT_VYRESENE||PRIO_ONLY)&&!bods.length)return;
-    var hint=secHint(so.s);
+    var zid=secStavbaId(so.s),base=secHintBase(so.s);
     h+='<div class="psek"><div class="psek-head"><input class="psek-akce" data-zakce="'+so.skid+'" value="'+esc(so.s.akce||'')+'" placeholder="Stavba / akce">'
-      +(hint?'<span class="psek-hint">'+esc(hint)+'</span>':'')
+      +(base?'<span class="psek-hint">'+esc(base)+'</span>':'')
+      +(zid?'<span class="psek-res">řeší <input class="psek-resi" data-zres="'+zid+'" value="'+esc((DATA.stavby[zid].lide&&DATA.stavby[zid].lide.resitel)||'')+'" placeholder="kdo?"></span>':'')
       +'<button class="psek-x" data-zskdel="'+so.skid+'" title="smazat stavbu ze zápisu">✕</button></div>';
     bods.forEach(function(x){
       h+='<div class="pbod'+(x.b.done?' done':'')+(x.b.prio?' prio':'')+'">'
@@ -1146,7 +1155,7 @@ function delZbv(sid,zid){
 }
 
 // ── modal: editace stavby (lidé + e-maily + cena díla) ──
-var STAVBA_ROLES=[['stavbyvedouci','Stavbyvedoucí'],['pripravar','Přípravář'],['objednatel','Objednatel'],['AD','Autorský dozor (AD)'],['TDI','Technický dozor (TDI/TDS)'],['CM','Supervize / CM']];
+var STAVBA_ROLES=[['resitel','Řešitel ZBV (kdo stavbu řeší)'],['stavbyvedouci','Stavbyvedoucí'],['pripravar','Přípravář'],['objednatel','Objednatel'],['AD','Autorský dozor (AD)'],['TDI','Technický dozor (TDI/TDS)'],['CM','Supervize / CM']];
 function openEditStavba(sid){
   var s=DATA.stavby[sid]||{},lide=s.lide||{},mail=s.lideMail||{};
   var h='<div class="mbox"><h3>Upravit stavbu</h3>'
@@ -1301,6 +1310,7 @@ $('porady').addEventListener('focusout',function(e){
   var dt=e.target.closest('[data-pdat]');if(dt){porSaveDatum(dt.getAttribute('data-pdat'),dt.value.trim());return;}
   var zx=e.target.closest('[data-ztxt]');if(zx){var z=zx.getAttribute('data-ztxt').split('|');zapSaveText(z[0],z[1],zx.textContent.trim());return;}
   var zk=e.target.closest('[data-zakce]');if(zk){zapSaveAkce(zk.getAttribute('data-zakce'),zk.value.trim());return;}
+  var zr=e.target.closest('[data-zres]');if(zr){var sid=zr.getAttribute('data-zres'),val=zr.value.trim(),s=DATA.stavby[sid];if(s){s.lide=s.lide||{};if(val)s.lide.resitel=val;else delete s.lide.resitel;if(db)db.ref('/stavby/'+sid+'/lide/resitel').set(val||null);renderPorady();}return;}
   var zo=e.target.closest('[data-zotxt]');if(zo){var zz=zo.getAttribute('data-zotxt').split('|');zapSaveOdp(zz[0],zz[1],zz[2],zo.textContent.trim());return;}
 });
 $('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
