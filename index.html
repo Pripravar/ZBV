@@ -146,6 +146,8 @@
   .zap-od-wrap{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
   .zap-od-wrap input[type=date]{font-size:12px;border:1px solid var(--line);border-radius:7px;padding:5px 7px;background:var(--card);color:var(--txt)}
   .zap-od-x{background:none;border:none;color:var(--neg);cursor:pointer;font-size:12px;padding:0 3px}
+  .zap-search{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--card);color:var(--txt);min-width:150px;flex:0 1 220px}
+  .zap-search:focus{outline:none;border-color:var(--accent)}
   .usek-chip{background:#e0e7ff !important;color:#3730a3 !important}
   /* výsledky globálního hledání */
   .srch-list{display:flex;flex-direction:column;gap:6px}
@@ -486,6 +488,7 @@ var POR_MODE='prubezne';    // 'prubezne' = průběžný zápis po stavbách | '
 var RESITEL_FILTER='';      // filtr „jen stavby řešitele X" (panel + průběžný zápis), '' = vše
 var USEK_FILTER='';         // filtr úsek MOSTY / OZ JIH (panel + zápis), '' = vše
 var ZAP_OD='';              // zápis: filtr „od data" (YYYY-MM-DD), '' = vše
+var ZAP_Q='';               // zápis: fulltext hledání (úkol/odpověď/stavba)
 var USEKY=['OZ JIH','MOSTY'];
 var VIEW='tabulka';
 var STAVBA_INIT=false;
@@ -939,17 +942,22 @@ function odpOrdered(b){var o=b.odpovedi||{};return Object.keys(o).map(function(o
 function zapMaxPoradi(){var m=0;sekceOrdered(zapEnsure()).forEach(function(o){if((o.s.poradi||0)>m)m=o.s.poradi||0;});return m;}
 function bodSince(b,odTs){if(!odTs)return true;if((b.ts||0)>=odTs)return true;return odOrderedTs(b).some(function(t){return t>=odTs;});}
 function odOrderedTs(b){var o=b.odpovedi||{};return Object.keys(o).map(function(k){return (o[k]&&o[k].ts)||0;});}
+function bodMatchesQ(b,q){if(deburr(b.text).indexOf(q)>=0)return true;var o=b.odpovedi||{};return Object.keys(o).some(function(k){return deburr(o[k]&&o[k].text).indexOf(q)>=0;});}
+function secNameQ(s,q){if(deburr(s.akce).indexOf(q)>=0)return true;var id=secStavbaId(s);return !!(id&&deburr(DATA.stavby[id].nazev).indexOf(q)>=0);}
 function renderZapis(){
   var el=$('porady');if(!el)return;var Z=zapEnsure();
-  var odTs=ZAP_OD?Date.parse(ZAP_OD):0;
+  var odTs=ZAP_OD?Date.parse(ZAP_OD):0,q=deburr(ZAP_Q);
   var seks=sekceSorted(Z).filter(function(o){var id=secStavbaId(o.s);
     if(RESITEL_FILTER&&(!id||stavbaResitel(id)!==RESITEL_FILTER))return false;
     if(USEK_FILTER&&(!id||(DATA.stavby[id].usek||'')!==USEK_FILTER))return false;
     return true;});
-  var open=0,prio=0;seks.forEach(function(o){bodyByTime(o.s).forEach(function(x){if(!x.b.done)open++;if(x.b.prio&&!x.b.done)prio++;});});
+  var anyF=SKRYT_VYRESENE||PRIO_ONLY||odTs||q;
+  var visN=0,open=0,prio=0;seks.forEach(function(o){var sm=q&&secNameQ(o.s,q);
+    var bb=bodyByTime(o.s).filter(function(x){return !(x.b.done&&SKRYT_VYRESENE)&&(!PRIO_ONLY||x.b.prio)&&bodSince(x.b,odTs)&&(!q||sm||bodMatchesQ(x.b,q));});
+    if(bb.length||!anyF){visN++;bb.forEach(function(x){if(!x.b.done)open++;if(x.b.prio&&!x.b.done)prio++;});}});
   var h='<div class="por-top"><div class="por-h">📋 Průběžný zápis po stavbách'
-    +'<span class="por-sub">'+seks.length+' staveb · '+open+' otevřených'+(prio?' · <b class="por-priocnt">⚑ '+prio+' priorit</b>':'')+'</span></div>'
-    +'<div class="por-tools">'+porSortSelHtml()+resitelSelHtml('zap-resitel')+usekSelHtml('zap-usek')
+    +'<span class="por-sub">'+visN+' staveb · '+open+' otevřených'+(prio?' · <b class="por-priocnt">⚑ '+prio+' priorit</b>':'')+'</span></div>'
+    +'<div class="por-tools"><input id="zap-search" class="zap-search" placeholder="🔎 hledat v zápisu (úkol, odpověď, stavba)" value="'+esc(ZAP_Q)+'">'+porSortSelHtml()+resitelSelHtml('zap-resitel')+usekSelHtml('zap-usek')
     +'<span class="zap-od-wrap" title="ukáže jen úkoly/odpovědi dopsané od tohoto data">od: <input type="date" id="zap-od" value="'+esc(ZAP_OD)+'">'+(ZAP_OD?'<button class="zap-od-x" id="zap-od-x" title="zrušit">✕</button>':'')+'</span>'
     +'<button class="btn'+(PRIO_ONLY?' on':'')+'" id="por-prio">⚑ jen priority</button>'
     +'<button class="btn" id="por-skryt">'+(SKRYT_VYRESENE?'☑ vyřešené skryté':'☐ skrýt vyřešené')+'</button>'
@@ -960,8 +968,9 @@ function renderZapis(){
     el.innerHTML=h;return;
   }
   seks.forEach(function(so){
-    var bods=bodyByTime(so.s).filter(function(x){return !(x.b.done&&SKRYT_VYRESENE)&&(!PRIO_ONLY||x.b.prio)&&bodSince(x.b,odTs);});
-    if((SKRYT_VYRESENE||PRIO_ONLY||odTs)&&!bods.length)return;
+    var sm=q&&secNameQ(so.s,q);
+    var bods=bodyByTime(so.s).filter(function(x){return !(x.b.done&&SKRYT_VYRESENE)&&(!PRIO_ONLY||x.b.prio)&&bodSince(x.b,odTs)&&(!q||sm||bodMatchesQ(x.b,q));});
+    if((SKRYT_VYRESENE||PRIO_ONLY||odTs||q)&&!bods.length)return;
     var zid=secStavbaId(so.s),base=secHintBase(so.s);
     h+='<div class="psek" data-skid="'+so.skid+'"'+(zid?' data-secsid="'+zid+'"':'')+'><div class="psek-head"><input class="psek-akce" data-zakce="'+so.skid+'" value="'+esc(so.s.akce||'')+'" placeholder="Stavba / akce">'
       +(base?'<span class="psek-hint">'+esc(base)+'</span>':'')
@@ -989,6 +998,7 @@ function renderZapis(){
     if(!bods.length)h+='<div class="por-none">— '+(PRIO_ONLY?'žádné priority':'vše vyřešené')+' —</div>';
     h+='<button class="pbod-add" data-zadd="'+so.skid+'">+ úkol</button></div>';
   });
+  if(!visN)h+='<div class="por-empty" style="margin-bottom:10px">Nic neodpovídá '+(q?'hledání „'+esc(ZAP_Q)+'"':'filtru')+'. Zruš hledání/filtr nahoře.</div>';
   h+='<div class="psek-tools">'+stavbyPickHtml('data-zpick')+'<button class="psek-add" data-zseka>+ volná sekce</button><button class="psek-add" data-zall>+ všechny aktivní stavby</button></div>';
   el.innerHTML=h;
 }
@@ -1391,6 +1401,10 @@ $('porady').addEventListener('click',function(e){
   var bd=e.target.closest('[data-pbdel]');if(bd){var d=bd.getAttribute('data-pbdel').split('|');porDelBod(d[0],d[1],d[2]);return;}
   var sd=e.target.closest('[data-pskdel]');if(sd){var s=sd.getAttribute('data-pskdel').split('|');porDelSekce(s[0],s[1]);return;}
   var pd=e.target.closest('[data-pdel]');if(pd){porDel(pd.getAttribute('data-pdel'));return;}
+});
+$('porady').addEventListener('input',function(e){
+  if(e.target.id==='zap-search'){ZAP_Q=e.target.value;var c=e.target.selectionStart;renderPorady();
+    var ni=document.getElementById('zap-search');if(ni){ni.focus();try{ni.setSelectionRange(c,c);}catch(_){}}}
 });
 $('porady').addEventListener('change',function(e){
   if(e.target.id==='por-sort'){SEKCE_SORT=e.target.value;renderPorady();return;}
