@@ -324,7 +324,7 @@
     <div class="fchips" id="f-stav">
       <button class="fchip f-evidovano" data-v="evidovano">Evidováno</button>
       <button class="fchip f-vproces" data-v="vproces">V přípravě</button>
-      <button class="fchip f-bezprogresu" data-v="bezprogresu">Bez progresu (vázne)</button>
+      <button class="fchip f-bezprogresu" data-v="bezprogresu">Na připomínkách u objednatele</button>
       <button class="fchip f-hotovo" data-v="hotovo">Hotovo</button>
       <button class="fchip f-fakturovano" data-v="fakturovano">Fakturováno</button>
     </div>
@@ -334,7 +334,7 @@
   <div class="legenda" id="legenda">Stav ZBV:
     <span><i class="lg seg-evidovano"></i>evidováno (zatím nezačato)</span>
     <span><i class="lg seg-vproces"></i>v přípravě</span>
-    <span><i class="lg seg-bezprogresu"></i>bez progresu (vázne 14+ dní)</span>
+    <span><i class="lg seg-bezprogresu"></i>na připomínkách u objednatele (14+ dní beze změny)</span>
     <span><i class="lg seg-hotovo"></i>hotovo / schváleno</span>
     <span><i class="lg seg-fakturovano"></i>fakturováno</span>
   </div>
@@ -475,7 +475,7 @@ function effStav(z){
   if(procesData)return 'vproces';   // v přípravě (čerstvě se hýbe)
   return 'evidovano';               // zatím jen zaevidováno / oznámeno, nezačato
 }
-var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Bez progresu',hotovo:'Hotovo',fakturovano:'Fakturováno'};
+var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Na připomínkách u objednatele',hotovo:'Hotovo',fakturovano:'Fakturováno'};
 
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{},porady:{},zapis:{sekce:{}}};
@@ -611,7 +611,7 @@ function renderTabulka(){
   if(L.l5!=null)metr+='<div class="smetric"><div class="l">Limit sk. 5 · 15 %</div><div class="v">'+fmtNum(L.l5)+' <span class="'+(L.cer5<=L.l5?'ok':'warn')+'">zbývá '+fmtNum(L.l5-L.cer5)+'</span></div></div>';
   metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
   // součty po stavech v této stavbě (počet · peníze)
-  var STS=[['evidovano','Evidováno'],['vproces','V přípravě'],['bezprogresu','Bez progresu (vázne)'],['hotovo','Hotovo'],['fakturovano','Fakturováno']];
+  var STS=[['evidovano','Evidováno'],['vproces','V přípravě'],['bezprogresu','Na připomínkách u objednatele'],['hotovo','Hotovo'],['fakturovano','Fakturováno']];
   var smet2='<div class="smetrics">'+STS.map(function(p){return '<div class="smetric st-'+p[0]+'"><div class="l">'+p[1]+'</div><div class="v">'+sm[p[0]].n+' <span class="sub-h">'+fmtNum(sm[p[0]].h)+' Kč</span></div></div>';}).join('')+'</div>';
   var archBtn=s.archiv?'↩️ vrátit z archivu':(allDone(sid)?'📦 Uklidit do archivu (vše vyfakturováno)':'📦 Uklidit do archivu');
   var head='<div class="shead"><div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">'
@@ -656,7 +656,7 @@ function zbvCard(sid,zid,z){
   if(kl)amt+='<span class="p">+'+kl+'</span> ';if(zp)amt+='<span class="n">−'+fmtNum(Math.abs(zp))+'</span>';
   var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
   var dny=lastKrokDays(z);
-  var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⚠ vázne '+dny+' dní</span>':'';
+  var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⏳ u objednatele '+dny+' dní</span>':'';
   var stadHtml=(sd.done
     ?'<span class="stadchip">'+esc(sd.doneLab)+(firstDate(sd.doneVal)?' · '+firstDate(sd.doneVal):'')+'</span>'+(sd.nextLab?'<span class="zwait">další: '+esc(sd.nextLab)+'</span>':'')
     :'<span class="stadchip">zatím bez kroků — jen evidováno</span>')+vazne;
@@ -1073,7 +1073,7 @@ function setTab(v){setView(v);[].forEach.call($('view').querySelectorAll('button
 
 // ředitelský přehled — součty ZBV a peněz přes VŠECHNY stavby po stavech
 function renderPrehled(){
-  var STATES=[['evidovano','Evidováno'],['vproces','V přípravě (rozpracováno)'],['bezprogresu','Bez progresu (vázne)'],['hotovo','Hotovo (schváleno)'],['fakturovano','Fakturováno']];
+  var STATES=[['evidovano','Evidováno'],['vproces','V přípravě (rozpracováno)'],['bezprogresu','Na připomínkách u objednatele'],['hotovo','Hotovo (schváleno)'],['fakturovano','Fakturováno']];
   var agg={};STATES.forEach(function(s){agg[s[0]]={n:0,h:0};});
   var arch={n:0,h:0,stavby:0};   // archiv (dokončené) — počítá se ZVLÁŠŤ, ne do aktivních
   var per=[];
@@ -1091,7 +1091,7 @@ function renderPrehled(){
   STATES.forEach(function(s){html+='<div class="ph-card st-'+s[0]+'"><div class="phc-l">'+s[1]+'</div><div class="phc-n">'+agg[s[0]].n+' ZBV</div><div class="phc-h">'+fmtNum(agg[s[0]].h)+' Kč</div></div>';});
   html+='<div class="ph-card ph-tot"><div class="phc-l">Celkem (aktivní)</div><div class="phc-n">'+totN+' ZBV</div><div class="phc-h">'+fmtNum(totH)+' Kč</div></div></div>';
   if(arch.stavby)html+='<div class="ph-cards"><div class="ph-card ph-arch"><div class="phc-l">📦 Archiv — dokončené (počítá se zvlášť)</div><div class="phc-n">'+arch.stavby+' staveb · '+arch.n+' ZBV</div><div class="phc-h">'+fmtNum(arch.h)+' Kč</div></div></div>';
-  html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V přípravě</th><th>Vázne</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
+  html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V přípravě</th><th>U objednatele</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
   function cell(r,k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
   function rowHtml(r){return '<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
       +'<td class="c">'+r.total+'</td>'+cell(r,'vproces','vp')+cell(r,'bezprogresu','bp')+cell(r,'hotovo','ho')+cell(r,'fakturovano','fa')+'<td class="cena"><b>'+fmtNum(r.suma)+'</b></td></tr>';}
