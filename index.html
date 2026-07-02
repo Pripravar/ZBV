@@ -205,6 +205,18 @@
   .zkom-row:hover .zkom-x{visibility:visible} .zkom-x:hover{color:var(--neg)}
   .zkom-add{background:none;border:none;color:#15803d;font-size:11.5px;cursor:pointer;padding:2px 3px;margin-top:1px}
   .zkom-add:hover{text-decoration:underline}
+  /* koš smazaných */
+  #kos-toggle.on{background:#fee2e2;border-color:#f59e0b;color:#92400e;font-weight:700}
+  .kos-top{font-size:12.5px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .kos-row{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--card);margin-bottom:6px}
+  .kos-typ{flex:0 0 auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:999px;background:var(--edit);color:var(--muted);min-width:70px;text-align:center}
+  .kos-bod .kos-typ{background:#eef1f4;color:#475569} .kos-odpoved .kos-typ{background:#e7eefc;color:#1e40af}
+  .kos-komentar .kos-typ{background:#dcfce7;color:#166534} .kos-sekce .kos-typ{background:#fef3c7;color:#92400e}
+  .kos-main{flex:1;min-width:0} .kos-nazev{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kos-meta{font-size:11px;color:var(--muted);margin-top:1px}
+  .kos-restore{flex:0 0 auto;padding:4px 10px;font-size:12px}
+  .kos-purge{flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px}
+  .kos-purge:hover{color:var(--neg)}
   .pbod{display:flex;align-items:flex-start;gap:8px;padding:3px 0}
   .pchk{flex:0 0 auto;width:20px;height:20px;border:1.5px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer;font-size:12px;color:#fff;line-height:1;margin-top:2px}
   .pbod.done .pchk{background:var(--hotovo);border-color:var(--hotovo)}
@@ -505,6 +517,7 @@ var RESITEL_FILTER='';      // filtr „jen stavby řešitele X" (panel + průb�
 var USEK_FILTER='';         // filtr úsek MOSTY / OZ JIH (panel + zápis), '' = vše
 var ZAP_OD='';              // zápis: filtr „od data" (YYYY-MM-DD), '' = vše
 var ZAP_Q='';               // zápis: fulltext hledání (úkol/odpověď/stavba)
+var SHOW_KOS=false;         // zápis: zobrazit koš smazaných
 var USEKY=['OZ JIH','MOSTY'];
 var VIEW='tabulka';
 var STAVBA_INIT=false;
@@ -996,7 +1009,9 @@ function renderZapis(){
     +'<span class="zap-od-wrap" title="ukáže jen úkoly/odpovědi dopsané od tohoto data">od: <input type="date" id="zap-od" value="'+esc(ZAP_OD)+'">'+(ZAP_OD?'<button class="zap-od-x" id="zap-od-x" title="zrušit">✕</button>':'')+'</span>'
     +'<button class="btn'+(PRIO_ONLY?' on':'')+'" id="por-prio">⚑ jen priority</button>'
     +'<button class="btn" id="por-skryt">'+(SKRYT_VYRESENE?'☑ vyřešené skryté':'☐ skrýt vyřešené')+'</button>'
-    +'<button class="btn" id="por-print">🖨️ '+(ZAP_OD?'Export od '+dStr(odTs):'Tisk')+'</button></div></div>';
+    +'<button class="btn" id="por-print">🖨️ '+(ZAP_OD?'Export od '+dStr(odTs):'Tisk')+'</button>'
+    +'<button class="btn'+(SHOW_KOS?' on':'')+'" id="kos-toggle" title="koš smazaných (lze vrátit)">🗑️ Koš'+(kosCount()?' ('+kosCount()+')':'')+'</button></div></div>';
+  if(SHOW_KOS){h+=renderKosHtml();el.innerHTML=h;return;}
   if(!seks.length){
     h+='<div class="por-empty">Zatím prázdné. Přidej stavbu („+ přidat stavbu" nebo „+ všechny aktivní") a piš pod ni úkoly. <b>Nejstarší jsou nahoře (s datem vzniku), nové níž.</b> Ke každému úkolu přidej <b>odpověď</b> (s datem), hotové odškrtni „✓", důležité označ ⚑. Pořád se jen dopisuje — nezačíná se od nuly.</div>'
       +'<div class="psek-tools">'+stavbyPickHtml('data-zpick')+'<button class="psek-add" data-zseka>+ volná sekce</button><button class="psek-add" data-zall>+ všechny aktivní stavby</button></div>';
@@ -1021,9 +1036,9 @@ function renderZapis(){
       var ods=odpOrdered(x.b);
       h+='<div class="zodp">';
       ods.forEach(function(oo){
-        h+='<div class="zodp-row"><span class="zodp-date">'+esc(dStr(oo.o.ts))+'</span>'
+        h+='<div class="zodp-row"><button class="zodp-kom" data-zkadd="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="přidat komentář k této odpovědi">💬</button>'
+          +'<span class="zodp-date">'+esc(dStr(oo.o.ts))+'</span>'
           +'<span class="zodp-txt" contenteditable="true" data-zotxt="'+so.skid+'|'+x.bid+'|'+oo.oid+'" placeholder="odpověď / řešení…">'+esc(oo.o.text||'')+'</span>'
-          +'<button class="zodp-kom" data-zkadd="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="přidat komentář k této odpovědi">💬</button>'
           +'<button class="zodp-x" data-zodel="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="smazat tuto odpověď">✕</button></div>';
         h+=komBlockHtml(oo.o,so.skid,x.bid,oo.oid,false);   // jen komentáře (přidávání je inline přes 💬)
       });
@@ -1064,11 +1079,29 @@ function zapToggle(skid,bid){var b=zapBod(skid,bid);if(!b)return;b.done=!b.done;
   if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid).update({done:b.done?true:null,doneTs:b.doneTs||null});renderPorady();}
 function zapPrio(skid,bid){var b=zapBod(skid,bid);if(!b)return;b.prio=!b.prio;
   if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/prio').set(b.prio?true:null);renderPorady();}
-function zapDelBod(skid,bid){var Z=DATA.zapis;if(!Z||!Z.sekce[skid])return;delete Z.sekce[skid].body[bid];
-  if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid).remove();renderPorady();}
+// ── KOŠ: mazání jde do koše (/zapis/kos), lze vrátit ──
+function sekceAkce(skid){return (DATA.zapis&&DATA.zapis.sekce&&DATA.zapis.sekce[skid])?(DATA.zapis.sekce[skid].akce||''):'';}
+function kosPush(typ,path,akce,nazev,data){var Z=zapEnsure();Z.kos=Z.kos||{};
+  var id=puid('t');Z.kos[id]={typ:typ,path:path,akce:akce||'',nazev:String(nazev||'').slice(0,140),data:data,ts:Date.now()};
+  if(db)db.ref('/zapis/kos/'+id).set(Z.kos[id]);}
+function kosList(){var k=(DATA.zapis&&DATA.zapis.kos)||{};return Object.keys(k).map(function(id){return {id:id,e:k[id]||{}};}).sort(function(a,b){return (b.e.ts||0)-(a.e.ts||0);});}
+function kosCount(){return Object.keys((DATA.zapis&&DATA.zapis.kos)||{}).length;}
+function zapDelBod(skid,bid){var Z=DATA.zapis;if(!Z||!Z.sekce[skid]||!Z.sekce[skid].body[bid])return;
+  var data=Z.sekce[skid].body[bid];kosPush('bod',{skid:skid,bid:bid},Z.sekce[skid].akce,data.text||'(prázdný úkol)',data);
+  delete Z.sekce[skid].body[bid];if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid).remove();renderPorady();}
 function zapDelSekce(skid){var Z=DATA.zapis;if(!Z||!Z.sekce[skid])return;
-  if(Object.keys(Z.sekce[skid].body||{}).length&&!confirm('Smazat stavbu „'+(Z.sekce[skid].akce||'')+'" ze zápisu i s úkoly?'))return;
+  var data=Z.sekce[skid];var n=Object.keys(data.body||{}).length;
+  if(n&&!confirm('Smazat stavbu „'+(data.akce||'')+'" ze zápisu i s úkoly? (půjde vrátit z koše)'))return;
+  kosPush('sekce',{skid:skid},data.akce,'stavba: '+(data.akce||'')+' ('+n+' úkolů)',data);
   delete Z.sekce[skid];if(db)db.ref('/zapis/sekce/'+skid).remove();renderPorady();}
+function kosRestore(id){var Z=DATA.zapis;var e=Z&&Z.kos?Z.kos[id]:null;if(!e)return;var p=e.path||{};
+  if(e.typ==='sekce'){Z.sekce=Z.sekce||{};Z.sekce[p.skid]=e.data;if(db)db.ref('/zapis/sekce/'+p.skid).set(e.data);}
+  else if(e.typ==='bod'){if(!Z.sekce[p.skid]){alert('Stavba, kam úkol patřil, už v zápisu není — nejdřív ji vrať z koše.');return;}Z.sekce[p.skid].body=Z.sekce[p.skid].body||{};Z.sekce[p.skid].body[p.bid]=e.data;if(db)db.ref('/zapis/sekce/'+p.skid+'/body/'+p.bid).set(e.data);}
+  else if(e.typ==='odpoved'){var b=zapBod(p.skid,p.bid);if(!b){alert('Úkol, kam odpověď patřila, už neexistuje — nejdřív ho vrať.');return;}b.odpovedi=b.odpovedi||{};b.odpovedi[p.oid]=e.data;if(db)db.ref('/zapis/sekce/'+p.skid+'/body/'+p.bid+'/odpovedi/'+p.oid).set(e.data);}
+  else if(e.typ==='komentar'){if(p.oid){var o=zapOdp(p.skid,p.bid,p.oid);if(!o){alert('Odpověď, kam komentář patřil, už neexistuje.');return;}o.komentare=o.komentare||{};o.komentare[p.kid]=e.data;if(db)db.ref('/zapis/sekce/'+p.skid+'/body/'+p.bid+'/odpovedi/'+p.oid+'/komentare/'+p.kid).set(e.data);}else{var b2=zapBod(p.skid,p.bid);if(!b2){alert('Úkol, kam komentář patřil, už neexistuje.');return;}b2.komentare=b2.komentare||{};b2.komentare[p.kid]=e.data;if(db)db.ref('/zapis/sekce/'+p.skid+'/body/'+p.bid+'/komentare/'+p.kid).set(e.data);}}
+  delete Z.kos[id];if(db)db.ref('/zapis/kos/'+id).remove();renderPorady();}
+function kosPurge(id){var Z=DATA.zapis;if(!Z||!Z.kos)return;delete Z.kos[id];if(db)db.ref('/zapis/kos/'+id).remove();renderPorady();}
+function kosEmpty(){if(!confirm('Trvale vysypat celý koš? Nepůjde vrátit.'))return;if(DATA.zapis)DATA.zapis.kos={};if(db)db.ref('/zapis/kos').remove();renderPorady();}
 function zapSaveText(skid,bid,txt){var b=zapBod(skid,bid);if(!b||b.text===txt)return;b.text=txt;
   if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/text').set(txt);}
 function zapSaveAkce(skid,txt){var Z=DATA.zapis;if(!Z||!Z.sekce[skid]||Z.sekce[skid].akce===txt)return;Z.sekce[skid].akce=txt;
@@ -1079,8 +1112,9 @@ function zapAddOdp(skid,bid){var b=zapBod(skid,bid);if(!b)return;b.odpovedi=b.od
   var t=document.querySelector('[data-zotxt="'+skid+'|'+bid+'|'+oid+'"]');if(t)t.focus();}
 function zapSaveOdp(skid,bid,oid,txt){var b=zapBod(skid,bid);if(!b||!b.odpovedi||!b.odpovedi[oid]||b.odpovedi[oid].text===txt)return;
   b.odpovedi[oid].text=txt;if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid+'/text').set(txt);}
-function zapDelOdp(skid,bid,oid){var b=zapBod(skid,bid);if(!b||!b.odpovedi)return;delete b.odpovedi[oid];
-  if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid).remove();renderPorady();}
+function zapDelOdp(skid,bid,oid){var b=zapBod(skid,bid);if(!b||!b.odpovedi||!b.odpovedi[oid])return;
+  var data=b.odpovedi[oid];kosPush('odpoved',{skid:skid,bid:bid,oid:oid},sekceAkce(skid),'odpověď: '+(data.text||''),data);
+  delete b.odpovedi[oid];if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid).remove();renderPorady();}
 // ── KOMENTÁŘE (zelené) — k odpovědi (oid) i k úkolu (B varianta) ──
 function zapAddKom(skid,bid,oid){var o=zapOdp(skid,bid,oid);if(!o)return;o.komentare=o.komentare||{};
   var kid=puid('k');o.komentare[kid]={text:'',ts:Date.now()};
@@ -1088,16 +1122,30 @@ function zapAddKom(skid,bid,oid){var o=zapOdp(skid,bid,oid);if(!o)return;o.komen
   var t=document.querySelector('[data-zktxt="'+skid+'|'+bid+'|'+oid+'|'+kid+'"]');if(t)t.focus();}
 function zapSaveKom(skid,bid,oid,kid,txt){var o=zapOdp(skid,bid,oid);if(!o||!o.komentare||!o.komentare[kid]||o.komentare[kid].text===txt)return;
   o.komentare[kid].text=txt;if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid+'/komentare/'+kid+'/text').set(txt);}
-function zapDelKom(skid,bid,oid,kid){var o=zapOdp(skid,bid,oid);if(!o||!o.komentare)return;delete o.komentare[kid];
-  if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid+'/komentare/'+kid).remove();renderPorady();}
+function zapDelKom(skid,bid,oid,kid){var o=zapOdp(skid,bid,oid);if(!o||!o.komentare||!o.komentare[kid])return;
+  var data=o.komentare[kid];kosPush('komentar',{skid:skid,bid:bid,oid:oid,kid:kid},sekceAkce(skid),'komentář: '+(data.text||''),data);
+  delete o.komentare[kid];if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/odpovedi/'+oid+'/komentare/'+kid).remove();renderPorady();}
 function zapAddKomB(skid,bid){var b=zapBod(skid,bid);if(!b)return;b.komentare=b.komentare||{};
   var kid=puid('k');b.komentare[kid]={text:'',ts:Date.now()};
   if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/komentare/'+kid).set(b.komentare[kid]);renderPorady();
   var t=document.querySelector('[data-zktxtb="'+skid+'|'+bid+'|'+kid+'"]');if(t)t.focus();}
 function zapSaveKomB(skid,bid,kid,txt){var b=zapBod(skid,bid);if(!b||!b.komentare||!b.komentare[kid]||b.komentare[kid].text===txt)return;
   b.komentare[kid].text=txt;if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/komentare/'+kid+'/text').set(txt);}
-function zapDelKomB(skid,bid,kid){var b=zapBod(skid,bid);if(!b||!b.komentare)return;delete b.komentare[kid];
-  if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/komentare/'+kid).remove();renderPorady();}
+function zapDelKomB(skid,bid,kid){var b=zapBod(skid,bid);if(!b||!b.komentare||!b.komentare[kid])return;
+  var data=b.komentare[kid];kosPush('komentar',{skid:skid,bid:bid,kid:kid},sekceAkce(skid),'komentář: '+(data.text||''),data);
+  delete b.komentare[kid];if(db)db.ref('/zapis/sekce/'+skid+'/body/'+bid+'/komentare/'+kid).remove();renderPorady();}
+function renderKosHtml(){var list=kosList();
+  var h='<div class="kos-wrap"><div class="kos-top"><b>🗑️ Koš</b> — smazané úkoly, odpovědi a komentáře. Vrať zpět, nebo trvale smaž.'+(list.length?' <button class="btn" id="kos-empty">Vysypat koš</button>':'')+'</div>';
+  if(!list.length){h+='<div class="por-empty">Koš je prázdný.</div></div>';return h;}
+  var TL={bod:'úkol',odpoved:'odpověď',komentar:'komentář',sekce:'stavba'};
+  list.forEach(function(o){var e=o.e;
+    h+='<div class="kos-row kos-'+e.typ+'"><span class="kos-typ">'+(TL[e.typ]||e.typ)+'</span>'
+      +'<div class="kos-main"><div class="kos-nazev">'+esc(e.nazev||'')+'</div>'
+      +'<div class="kos-meta">'+(e.akce?esc(e.akce)+' · ':'')+'smazáno '+esc(tsStr(e.ts))+'</div></div>'
+      +'<button class="btn kos-restore" data-kosr="'+o.id+'">↩︎ Vrátit</button>'
+      +'<button class="kos-purge" data-kosp="'+o.id+'" title="smazat trvale">✕</button></div>';
+  });
+  return h+'</div>';}
 function zapPrint(){var Z=zapEnsure(),w=window.open('','_blank');if(!w)return;
   var odTs=ZAP_OD?Date.parse(ZAP_OD):0;
   var html='<html><head><meta charset="utf-8"><title>Průběžný zápis ZBV</title>'
@@ -1432,6 +1480,10 @@ $('inbox').addEventListener('click',function(e){
 $('porady').addEventListener('click',function(e){
   var md=e.target.closest('[data-pmode]');if(md){POR_MODE=md.getAttribute('data-pmode');renderPorady();return;}
   if(e.target.closest('#por-print')){if(POR_MODE==='porady')porPrint();else zapPrint();return;}
+  if(e.target.closest('#kos-toggle')){SHOW_KOS=!SHOW_KOS;renderPorady();return;}
+  if(e.target.closest('#kos-empty')){kosEmpty();return;}
+  var kr=e.target.closest('[data-kosr]');if(kr){kosRestore(kr.getAttribute('data-kosr'));return;}
+  var kp=e.target.closest('[data-kosp]');if(kp){if(confirm('Smazat tuto položku z koše TRVALE?'))kosPurge(kp.getAttribute('data-kosp'));return;}
   if(e.target.closest('#zap-od-x')){ZAP_OD='';renderPorady();return;}
   var gs=e.target.closest('[data-gostavba]');if(gs){openStavbaFromZapis(gs.getAttribute('data-gostavba'));return;}
   if(e.target.closest('#por-skryt')){SKRYT_VYRESENE=!SKRYT_VYRESENE;renderPorady();return;}
