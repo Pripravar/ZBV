@@ -187,6 +187,9 @@
   .zodp-txt:empty:before{content:attr(placeholder);color:var(--muted)}
   .zodp-x{flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:1px 4px;border-radius:5px;visibility:hidden}
   .zodp-row:hover .zodp-x{visibility:visible} .zodp-x:hover{color:var(--neg)}
+  .zodp-kom{flex:0 0 auto;background:none;border:none;color:#15803d;cursor:pointer;font-size:12px;padding:1px 4px;border-radius:5px;visibility:hidden}
+  .zodp-row:hover .zodp-kom{visibility:visible} .zodp-kom:hover{background:#f0fdf4}
+  .zodp-row:has(.zodp-x:hover){box-shadow:inset 0 1.5px 0 var(--neg),inset 0 -1.5px 0 var(--neg);background:#fef2f2;border-radius:4px}
   .zodp-add{background:none;border:none;color:var(--accent);font-size:11.5px;cursor:pointer;padding:2px 3px;margin-top:1px}
   .zodp-add:hover{text-decoration:underline}
   /* zelený komentář (kolegyně řešící ZBV) — odskočený pod odpovědí/úkolem */
@@ -1018,8 +1021,9 @@ function renderZapis(){
       ods.forEach(function(oo){
         h+='<div class="zodp-row"><span class="zodp-date">'+esc(dStr(oo.o.ts))+'</span>'
           +'<span class="zodp-txt" contenteditable="true" data-zotxt="'+so.skid+'|'+x.bid+'|'+oo.oid+'" placeholder="odpověď / řešení…">'+esc(oo.o.text||'')+'</span>'
-          +'<button class="zodp-x" data-zodel="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="smazat odpověď">✕</button></div>';
-        h+=komBlockHtml(oo.o,so.skid,x.bid,oo.oid,true);   // komentáře k odpovědi (zeleně)
+          +'<button class="zodp-kom" data-zkadd="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="přidat komentář k této odpovědi">💬</button>'
+          +'<button class="zodp-x" data-zodel="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="smazat tuto odpověď">✕</button></div>';
+        h+=komBlockHtml(oo.o,so.skid,x.bid,oo.oid,false);   // jen komentáře (přidávání je inline přes 💬)
       });
       if(!ods.length||Object.keys(x.b.komentare||{}).length)h+=komBlockHtml(x.b,so.skid,x.bid,null,!ods.length); // komentáře k úkolu (jen když nemá odpověď)
       h+='<button class="zodp-add" data-zoadd="'+so.skid+'|'+x.bid+'">↳ odpověď</button></div>';
