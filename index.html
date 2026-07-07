@@ -135,6 +135,7 @@
   .psek-x{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:6px;visibility:hidden}
   .psek:hover .psek-x{visibility:visible} .psek-x:hover{color:var(--neg)}
   .psek-hint{font-size:10.5px;color:var(--muted);background:var(--edit);border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .psek-link{font-size:11px;border:1px solid var(--accent);border-radius:7px;padding:3px 8px;background:#eef4ff;color:var(--accent);font-weight:600;max-width:200px}
   .psek-res{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
   .psek-resi{font-size:11px;width:84px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;background:var(--card);color:var(--accent);font-weight:600}
   .psek-resi:focus{outline:none;border-color:var(--accent)}
@@ -787,6 +788,13 @@ function stavbyPickHtml(attr){var stOpts=Object.keys(DATA.stavby).map(function(s
   .filter(function(o){return !o.s.archiv;}).sort(function(a,b){return cmpTxt(a.s.nazev,b.s.nazev);})
   .map(function(o){return '<option value="'+o.sid+'">'+esc(o.s.nazev||o.sid)+(o.s.cislo?' (č. '+esc(o.s.cislo)+')':'')+'</option>';}).join('');
   return '<select class="psek-pick" '+attr+'><option value="">+ přidat stavbu…</option>'+stOpts+'</select>';}
+// rozbalovák „propojit sekci se stavbou" (u sekcí, které se nespárovaly podle názvu)
+function linkSelHtml(skid){var stOpts=Object.keys(DATA.stavby).map(function(sid){return {sid:sid,s:DATA.stavby[sid]};})
+  .filter(function(o){return !o.s.archiv;}).sort(function(a,b){return cmpTxt(a.s.nazev,b.s.nazev);})
+  .map(function(o){return '<option value="'+o.sid+'">'+esc(o.s.nazev||o.sid)+(o.s.cislo?' (č. '+esc(o.s.cislo)+')':'')+'</option>';}).join('');
+  return '<select class="psek-link" data-zlink="'+skid+'" title="propojit tuto sekci se stavbou"><option value="">🔗 propojit se stavbou…</option>'+stOpts+'</select>';}
+function zapLinkStavba(skid,sid){var Z=DATA.zapis;if(!Z||!Z.sekce[skid]||!DATA.stavby[sid])return;
+  Z.sekce[skid].stavbaId=sid;if(db)db.ref('/zapis/sekce/'+skid+'/stavbaId').set(sid);renderPorady();}
 function renderPorady(){var el=$('porady');if(!el)return;renderZapis();}
 function renderPoradyDated(){
   var el=$('porady');if(!el)return;
@@ -1025,7 +1033,7 @@ function renderZapis(){
     h+='<div class="psek" data-skid="'+so.skid+'"'+(zid?' data-secsid="'+zid+'"':'')+'><div class="psek-head"><input class="psek-akce" data-zakce="'+so.skid+'" value="'+esc(so.s.akce||'')+'" placeholder="Stavba / akce">'
       +(base?'<span class="psek-hint">'+esc(base)+'</span>':'')
       +(zid?'<span class="psek-res">řeší <input class="psek-resi" data-zres="'+zid+'" value="'+esc((DATA.stavby[zid].lide&&DATA.stavby[zid].lide.resitel)||'')+'" placeholder="kdo?"></span>':'')
-      +(zid?'<button class="psek-goto" data-gostavba="'+zid+'" title="otevřít tuto stavbu v Tabulce">📋 Stavba</button>':'')
+      +(zid?'<button class="psek-goto" data-gostavba="'+zid+'" title="otevřít tuto stavbu v Tabulce">📋 Stavba</button>':linkSelHtml(so.skid))
       +'<button class="psek-x" data-zskdel="'+so.skid+'" title="smazat stavbu ze zápisu">✕</button></div>';
     bods.forEach(function(x){
       h+='<div class="pbod'+(x.b.done?' done':'')+(x.b.prio?' prio':'')+'">'
@@ -1533,6 +1541,7 @@ $('porady').addEventListener('change',function(e){
   if(e.target.id==='zap-od'){ZAP_OD=e.target.value;renderPorady();return;}
   var pk=e.target.closest('[data-ppick]');if(pk&&e.target.value){porAddStavba(pk.getAttribute('data-ppick'),e.target.value);return;}
   if(e.target.closest('[data-zpick]')&&e.target.value){zapAddStavba(e.target.value);return;}
+  var zl=e.target.closest('[data-zlink]');if(zl&&e.target.value){zapLinkStavba(zl.getAttribute('data-zlink'),e.target.value);return;}
 });
 $('porady').addEventListener('focusout',function(e){
   var tx=e.target.closest('[data-ptxt]');if(tx){var p=tx.getAttribute('data-ptxt').split('|');porSaveText(p[0],p[1],p[2],tx.textContent.trim());return;}
