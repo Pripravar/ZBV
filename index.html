@@ -1258,8 +1258,12 @@ function applyNavrh(nv){
   }
   var z=DATA.zbv[sid][zid]||{};DATA.zbv[sid][zid]=z;
   // doplň identifikaci i u EXISTUJÍCÍ ZBV: prázdné pole vyplň; číslo „?" přečísluj na skutečné
-  ['oznameniCislo','SO','nazev','popis'].forEach(function(f){if(nv[f]&&!z[f])z[f]=nv[f];});
+  ['SO','nazev','popis'].forEach(function(f){if(nv[f]&&!z[f])z[f]=nv[f];});
   if(nv.zbvCislo&&(!z.zbvCislo||z.zbvCislo==='?'))z.zbvCislo=nv.zbvCislo;
+  // víc oznámení do JEDNÉ ZBV → čísla oznámení PŘIDÁVEJ (neduplikuj), ne přepisuj
+  if(nv.oznameniCislo){var cur=String(z.oznameniCislo||'').trim();
+    var parts=cur.split(/[,;]\s*|\s+/).filter(Boolean);
+    if(parts.indexOf(String(nv.oznameniCislo))===-1)z.oznameniCislo=cur?(cur+', '+nv.oznameniCislo):String(nv.oznameniCislo);}
   if(nv.krok&&nv.hodnota)setVal(z,nv.krok,nv.hodnota);
   // částky
   ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
