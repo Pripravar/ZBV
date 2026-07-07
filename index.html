@@ -223,10 +223,15 @@
   .ztab-zbv{flex:1;min-width:0}
   .ztab-zapis{flex:0 0 372px;position:sticky;top:92px;max-height:calc(100vh - 108px);overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--head);padding:8px 10px}
   .ztab-zh{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:6px}
-  .ztab-zh .ztab-open{margin-left:auto;font-size:11px;padding:3px 8px;font-weight:400}
+  .ztab-zh .ztab-hide{margin-left:auto;font-size:11px;padding:3px 8px;font-weight:400}
+  .ztab-zh .ztab-hide.on{background:#dcfce7;border-color:#86efac;color:#166534}
+  .ztab-zh .ztab-open{font-size:11px;padding:3px 8px;font-weight:400}
   .ztab-zbody .pbod{padding:3px 0}
   .ztab-empty{color:var(--muted);font-size:12.5px;padding:4px 2px 8px}
-  @media(max-width:900px){.ztab-split{flex-direction:column}.ztab-zapis{flex:none;width:100%;position:static;max-height:none}}
+  .ztab-drag{flex:0 0 8px;align-self:stretch;cursor:col-resize;position:relative;min-height:220px}
+  .ztab-drag:before{content:'';position:absolute;left:3px;top:0;bottom:0;width:2px;background:var(--line);border-radius:2px}
+  .ztab-drag:hover:before{background:var(--accent);width:3px;left:2.5px}
+  @media(max-width:900px){.ztab-split{flex-direction:column}.ztab-zapis{flex:none !important;width:100%;position:static;max-height:none}.ztab-drag{display:none}}
   .pbod{display:flex;align-items:flex-start;gap:8px;padding:3px 0}
   .pchk{flex:0 0 auto;width:20px;height:20px;border:1.5px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer;font-size:12px;color:#fff;line-height:1;margin-top:2px}
   .pbod.done .pchk{background:var(--hotovo);border-color:var(--hotovo)}
@@ -528,6 +533,7 @@ var USEK_FILTER='';         // filtr úsek MOSTY / OZ JIH (panel + zápis), '' =
 var ZAP_OD='';              // zápis: filtr „od data" (YYYY-MM-DD), '' = vše
 var ZAP_Q='';               // zápis: fulltext hledání (úkol/odpověď/stavba)
 var SHOW_KOS=false;         // zápis: zobrazit koš smazaných
+var ZAPIS_W=(function(){try{return parseInt(localStorage.getItem('zbv_zapis_w')||'372',10)||372;}catch(_){return 372;}})();  // šířka pravého panelu (zápis) v Tabulce
 var USEKY=['OZ JIH','MOSTY'];
 var VIEW='tabulka';
 var STAVBA_INIT=false;
@@ -666,7 +672,7 @@ function renderTabulka(){
   rows.sort(function(a,b){return zbvSort(a.z)-zbvSort(b.z);});
   var cards=rows.map(function(r){return zbvCard(sid,r.zid,r.z);}).join('');
   var leftHtml=head+(cards||'<div class="empty">Žádné ZBV odpovídající filtru.</div>');
-  $('list').innerHTML='<div class="ztab-split"><div class="ztab-zbv">'+leftHtml+'</div>'+zapisPanelHtml(sid)+'</div>';
+  $('list').innerHTML='<div class="ztab-split"><div class="ztab-zbv">'+leftHtml+'</div><div class="ztab-drag" id="ztab-drag" title="táhni pro změnu šířky"></div>'+zapisPanelHtml(sid)+'</div>';
   upd();
 }
 // globální hledání napříč VŠEMI stavbami (číslo ZBV, SO, název, popis, příčina, název stavby)
@@ -1034,15 +1040,17 @@ function zapBodHtml(skid,bid,b){
 function zapisPanelHtml(sid){
   var Z=zapEnsure();
   var secs=sekceOrdered(Z).filter(function(o){return secStavbaId(o.s)===sid;});
-  var h='<div class="ztab-zapis"><div class="ztab-zh">🗓️ Zápis z porady'
+  var h='<div class="ztab-zapis" style="flex:0 0 '+ZAPIS_W+'px"><div class="ztab-zh">🗓️ Zápis z porady'
+    +'<button class="btn ztab-hide'+(SKRYT_VYRESENE?' on':'')+'" data-zhide title="skrýt hotové úkoly">'+(SKRYT_VYRESENE?'☑':'☐')+' hotové</button>'
     +'<button class="btn ztab-open" data-gozap="'+sid+'" title="otevřít v záložce Porady">otevřít ↗</button></div><div class="ztab-zbody">';
   if(!secs.length){
     h+='<div class="ztab-empty">Zatím žádný zápis k této stavbě.</div>'
       +'<button class="pbod-add" data-znew="'+sid+'">+ přidat úkol</button>';
   }else{
     secs.forEach(function(so){
-      bodyByTime(so.s).forEach(function(x){h+=zapBodHtml(so.skid,x.bid,x.b);});
-      if(!Object.keys(so.s.body||{}).length)h+='<div class="por-none">— zatím žádné úkoly —</div>';
+      var bods=bodyByTime(so.s).filter(function(x){return !(x.b.done&&SKRYT_VYRESENE);});
+      bods.forEach(function(x){h+=zapBodHtml(so.skid,x.bid,x.b);});
+      if(!bods.length)h+='<div class="por-none">— '+(SKRYT_VYRESENE?'vše hotové':'zatím žádné úkoly')+' —</div>';
       h+='<button class="pbod-add" data-zadd="'+so.skid+'">+ úkol</button>';
     });
   }
@@ -1497,6 +1505,7 @@ $('stavby-side').addEventListener('click',function(e){
 $('list').addEventListener('click',function(e){
   var gz=e.target.closest('[data-gozap]');if(gz){gotoZapisStavba(gz.getAttribute('data-gozap'));return;}
   // zápis v pravém panelu Tabulky
+  if(e.target.closest('[data-zhide]')){SKRYT_VYRESENE=!SKRYT_VYRESENE;renderTabulka();return;}
   var zn=e.target.closest('[data-znew]');if(zn){zapAddStavba(zn.getAttribute('data-znew'));return;}
   var za=e.target.closest('[data-zadd]');if(za){zapAddBod(za.getAttribute('data-zadd'));return;}
   var zt=e.target.closest('[data-ztog]');if(zt){var z1=zt.getAttribute('data-ztog').split('|');zapToggle(z1[0],z1[1]);return;}
@@ -1517,6 +1526,14 @@ $('list').addEventListener('click',function(e){
   var ed=e.target.closest('[data-ed]');if(ed){var p=ed.getAttribute('data-ed').split('|');openEditZbv(p[0],p[1]);return;}
   var ad=e.target.closest('[data-add]');if(ad){openNewZbv(ad.getAttribute('data-add'));return;}
   var dl=e.target.closest('[data-del]');if(dl){var p2=dl.getAttribute('data-del').split('|');delZbv(p2[0],p2[1]);return;}
+});
+$('list').addEventListener('mousedown',function(e){
+  if(!e.target.closest('#ztab-drag'))return;e.preventDefault();
+  var panel=document.querySelector('#list .ztab-zapis');if(!panel)return;
+  var startX=e.clientX,startW=panel.getBoundingClientRect().width;document.body.style.userSelect='none';
+  function mm(ev){var w=Math.min(760,Math.max(240,startW+(startX-ev.clientX)));panel.style.flex='0 0 '+w+'px';ZAPIS_W=Math.round(w);}
+  function mu(){document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.body.style.userSelect='';try{localStorage.setItem('zbv_zapis_w',String(ZAPIS_W));}catch(_){}}
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
 });
 $('list').addEventListener('focusout',function(e){
   var zx=e.target.closest('[data-ztxt]');if(zx){var z=zx.getAttribute('data-ztxt').split('|');zapSaveText(z[0],z[1],zx.textContent.trim());return;}
