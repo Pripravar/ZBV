@@ -218,6 +218,15 @@
   .kos-restore{flex:0 0 auto;padding:4px 10px;font-size:12px}
   .kos-purge{flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px}
   .kos-purge:hover{color:var(--neg)}
+  /* rozpůlená Tabulka: vlevo ZBV, vpravo zápis z porady */
+  .ztab-split{display:flex;gap:14px;align-items:flex-start}
+  .ztab-zbv{flex:1;min-width:0}
+  .ztab-zapis{flex:0 0 372px;position:sticky;top:92px;max-height:calc(100vh - 108px);overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--head);padding:8px 10px}
+  .ztab-zh{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:6px}
+  .ztab-zh .ztab-open{margin-left:auto;font-size:11px;padding:3px 8px;font-weight:400}
+  .ztab-zbody .pbod{padding:3px 0}
+  .ztab-empty{color:var(--muted);font-size:12.5px;padding:4px 2px 8px}
+  @media(max-width:900px){.ztab-split{flex-direction:column}.ztab-zapis{flex:none;width:100%;position:static;max-height:none}}
   .pbod{display:flex;align-items:flex-start;gap:8px;padding:3px 0}
   .pchk{flex:0 0 auto;width:20px;height:20px;border:1.5px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer;font-size:12px;color:#fff;line-height:1;margin-top:2px}
   .pbod.done .pchk{background:var(--hotovo);border-color:var(--hotovo)}
@@ -656,7 +665,8 @@ function renderTabulka(){
   var rows=zbvOrdered(sid).filter(function(r){return rowMatches(sid,r.zid,r.z);});
   rows.sort(function(a,b){return zbvSort(a.z)-zbvSort(b.z);});
   var cards=rows.map(function(r){return zbvCard(sid,r.zid,r.z);}).join('');
-  $('list').innerHTML=head+(cards||'<div class="empty">Žádné ZBV odpovídající filtru.</div>');
+  var leftHtml=head+(cards||'<div class="empty">Žádné ZBV odpovídající filtru.</div>');
+  $('list').innerHTML='<div class="ztab-split"><div class="ztab-zbv">'+leftHtml+'</div>'+zapisPanelHtml(sid)+'</div>';
   upd();
 }
 // globální hledání napříč VŠEMI stavbami (číslo ZBV, SO, název, popis, příčina, název stavby)
@@ -795,7 +805,7 @@ function linkSelHtml(skid){var stOpts=Object.keys(DATA.stavby).map(function(sid)
   return '<select class="psek-link" data-zlink="'+skid+'" title="propojit tuto sekci se stavbou"><option value="">🔗 propojit se stavbou…</option>'+stOpts+'</select>';}
 function zapLinkStavba(skid,sid){var Z=DATA.zapis;if(!Z||!Z.sekce[skid]||!DATA.stavby[sid])return;
   Z.sekce[skid].stavbaId=sid;if(db)db.ref('/zapis/sekce/'+skid+'/stavbaId').set(sid);renderPorady();}
-function renderPorady(){var el=$('porady');if(!el)return;renderZapis();}
+function renderPorady(){if(VIEW==='tabulka'){renderTabulka();return;}var el=$('porady');if(!el)return;renderZapis();}
 function renderPoradyDated(){
   var el=$('porady');if(!el)return;
   var list=poradyOrdered();
@@ -1000,6 +1010,44 @@ function komBlockHtml(node,skid,bid,oid,showAdd){
   return h+'</div>';
 }
 function secNameQ(s,q){if(deburr(s.akce).indexOf(q)>=0)return true;var id=secStavbaId(s);return !!(id&&deburr(DATA.stavby[id].nazev).indexOf(q)>=0);}
+// HTML jednoho úkolu (sdílené: průběžný zápis i pravý panel v Tabulce)
+function zapBodHtml(skid,bid,b){
+  var h='<div class="pbod'+(b.done?' done':'')+(b.prio?' prio':'')+'">'
+    +'<button class="pchk" data-ztog="'+skid+'|'+bid+'" title="'+(b.done?'vrátit jako otevřené':'označit vyřešeno')+'">'+(b.done?'✓':'')+'</button>'
+    +'<div class="zbod-main"><div class="ztxtline">'
+    +'<span class="ptxt" contenteditable="true" data-ztxt="'+skid+'|'+bid+'" placeholder="napiš úkol…">'+esc(b.text||'')+'</span>'
+    +'<span class="zbod-date">'+(b.ts?'· '+dStr(b.ts):'')+(b.done&&b.doneTs?' · ✓ '+dStr(b.doneTs):'')+'</span></div>';
+  var ods=odpOrdered(b);h+='<div class="zodp">';
+  ods.forEach(function(oo){
+    h+='<div class="zodp-row"><button class="zodp-kom" data-zkadd="'+skid+'|'+bid+'|'+oo.oid+'" title="přidat komentář k této odpovědi">💬</button>'
+      +'<span class="zodp-date">'+esc(dStr(oo.o.ts))+'</span>'
+      +'<span class="zodp-txt" contenteditable="true" data-zotxt="'+skid+'|'+bid+'|'+oo.oid+'" placeholder="odpověď / řešení…">'+esc(oo.o.text||'')+'</span>'
+      +'<button class="zodp-x" data-zodel="'+skid+'|'+bid+'|'+oo.oid+'" title="smazat tuto odpověď">✕</button></div>';
+    h+=komBlockHtml(oo.o,skid,bid,oo.oid,false);
+  });
+  if(!ods.length||Object.keys(b.komentare||{}).length)h+=komBlockHtml(b,skid,bid,null,!ods.length);
+  h+='<button class="zodp-add" data-zoadd="'+skid+'|'+bid+'">↳ odpověď</button></div>';
+  return h+'</div><button class="pflag'+(b.prio?' on':'')+'" data-zprio="'+skid+'|'+bid+'" title="prioritní úkol">⚑</button>'
+    +'<button class="pbx" data-zbdel="'+skid+'|'+bid+'" title="smazat úkol">✕</button></div>';
+}
+// pravý panel Tabulky = zápis z porady pro danou stavbu
+function zapisPanelHtml(sid){
+  var Z=zapEnsure();
+  var secs=sekceOrdered(Z).filter(function(o){return secStavbaId(o.s)===sid;});
+  var h='<div class="ztab-zapis"><div class="ztab-zh">🗓️ Zápis z porady'
+    +'<button class="btn ztab-open" data-gozap="'+sid+'" title="otevřít v záložce Porady">otevřít ↗</button></div><div class="ztab-zbody">';
+  if(!secs.length){
+    h+='<div class="ztab-empty">Zatím žádný zápis k této stavbě.</div>'
+      +'<button class="pbod-add" data-znew="'+sid+'">+ přidat úkol</button>';
+  }else{
+    secs.forEach(function(so){
+      bodyByTime(so.s).forEach(function(x){h+=zapBodHtml(so.skid,x.bid,x.b);});
+      if(!Object.keys(so.s.body||{}).length)h+='<div class="por-none">— zatím žádné úkoly —</div>';
+      h+='<button class="pbod-add" data-zadd="'+so.skid+'">+ úkol</button>';
+    });
+  }
+  return h+'</div></div>';
+}
 function renderZapis(){
   var el=$('porady');if(!el)return;var Z=zapEnsure();
   var odTs=ZAP_OD?Date.parse(ZAP_OD):0,q=deburr(ZAP_Q);
@@ -1035,27 +1083,7 @@ function renderZapis(){
       +(zid?'<span class="psek-res">řeší <input class="psek-resi" data-zres="'+zid+'" value="'+esc((DATA.stavby[zid].lide&&DATA.stavby[zid].lide.resitel)||'')+'" placeholder="kdo?"></span>':'')
       +(zid?'<button class="psek-goto" data-gostavba="'+zid+'" title="otevřít tuto stavbu v Tabulce">📋 Stavba</button>':linkSelHtml(so.skid))
       +'<button class="psek-x" data-zskdel="'+so.skid+'" title="smazat stavbu ze zápisu">✕</button></div>';
-    bods.forEach(function(x){
-      h+='<div class="pbod'+(x.b.done?' done':'')+(x.b.prio?' prio':'')+'">'
-        +'<button class="pchk" data-ztog="'+so.skid+'|'+x.bid+'" title="'+(x.b.done?'vrátit jako otevřené':'označit vyřešeno')+'">'+(x.b.done?'✓':'')+'</button>'
-        +'<div class="zbod-main"><div class="ztxtline">'
-        +'<span class="ptxt" contenteditable="true" data-ztxt="'+so.skid+'|'+x.bid+'" placeholder="napiš úkol…">'+esc(x.b.text||'')+'</span>'
-        +'<span class="zbod-date">'+(x.b.ts?'· '+dStr(x.b.ts):'')+(x.b.done&&x.b.doneTs?' · ✓ '+dStr(x.b.doneTs):'')+'</span></div>';
-      var ods=odpOrdered(x.b);
-      h+='<div class="zodp">';
-      ods.forEach(function(oo){
-        h+='<div class="zodp-row"><button class="zodp-kom" data-zkadd="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="přidat komentář k této odpovědi">💬</button>'
-          +'<span class="zodp-date">'+esc(dStr(oo.o.ts))+'</span>'
-          +'<span class="zodp-txt" contenteditable="true" data-zotxt="'+so.skid+'|'+x.bid+'|'+oo.oid+'" placeholder="odpověď / řešení…">'+esc(oo.o.text||'')+'</span>'
-          +'<button class="zodp-x" data-zodel="'+so.skid+'|'+x.bid+'|'+oo.oid+'" title="smazat tuto odpověď">✕</button></div>';
-        h+=komBlockHtml(oo.o,so.skid,x.bid,oo.oid,false);   // jen komentáře (přidávání je inline přes 💬)
-      });
-      if(!ods.length||Object.keys(x.b.komentare||{}).length)h+=komBlockHtml(x.b,so.skid,x.bid,null,!ods.length); // komentáře k úkolu (jen když nemá odpověď)
-      h+='<button class="zodp-add" data-zoadd="'+so.skid+'|'+x.bid+'">↳ odpověď</button></div>';
-      h+='</div>'
-        +'<button class="pflag'+(x.b.prio?' on':'')+'" data-zprio="'+so.skid+'|'+x.bid+'" title="prioritní úkol">⚑</button>'
-        +'<button class="pbx" data-zbdel="'+so.skid+'|'+x.bid+'" title="smazat úkol">✕</button></div>';
-    });
+    bods.forEach(function(x){h+=zapBodHtml(so.skid,x.bid,x.b);});
     if(!bods.length)h+='<div class="por-none">— '+(PRIO_ONLY?'žádné priority':'vše vyřešené')+' —</div>';
     h+='<button class="pbod-add" data-zadd="'+so.skid+'">+ úkol</button></div>';
   });
@@ -1468,6 +1496,18 @@ $('stavby-side').addEventListener('click',function(e){
   var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
 $('list').addEventListener('click',function(e){
   var gz=e.target.closest('[data-gozap]');if(gz){gotoZapisStavba(gz.getAttribute('data-gozap'));return;}
+  // zápis v pravém panelu Tabulky
+  var zn=e.target.closest('[data-znew]');if(zn){zapAddStavba(zn.getAttribute('data-znew'));return;}
+  var za=e.target.closest('[data-zadd]');if(za){zapAddBod(za.getAttribute('data-zadd'));return;}
+  var zt=e.target.closest('[data-ztog]');if(zt){var z1=zt.getAttribute('data-ztog').split('|');zapToggle(z1[0],z1[1]);return;}
+  var zp=e.target.closest('[data-zprio]');if(zp){var z2=zp.getAttribute('data-zprio').split('|');zapPrio(z2[0],z2[1]);return;}
+  var zb=e.target.closest('[data-zbdel]');if(zb){var z3=zb.getAttribute('data-zbdel').split('|');zapDelBod(z3[0],z3[1]);return;}
+  var zoa=e.target.closest('[data-zoadd]');if(zoa){var z4=zoa.getAttribute('data-zoadd').split('|');zapAddOdp(z4[0],z4[1]);return;}
+  var zod=e.target.closest('[data-zodel]');if(zod){var z5=zod.getAttribute('data-zodel').split('|');zapDelOdp(z5[0],z5[1],z5[2]);return;}
+  var ka=e.target.closest('[data-zkadd]');if(ka){var ka1=ka.getAttribute('data-zkadd').split('|');zapAddKom(ka1[0],ka1[1],ka1[2]);return;}
+  var kab=e.target.closest('[data-zkaddb]');if(kab){var ka2=kab.getAttribute('data-zkaddb').split('|');zapAddKomB(ka2[0],ka2[1]);return;}
+  var kdl=e.target.closest('[data-zkdel]');if(kdl){var kd1=kdl.getAttribute('data-zkdel').split('|');zapDelKom(kd1[0],kd1[1],kd1[2],kd1[3]);return;}
+  var kdb=e.target.closest('[data-zkdelb]');if(kdb){var kd2=kdb.getAttribute('data-zkdelb').split('|');zapDelKomB(kd2[0],kd2[1],kd2[2]);return;}
   var sr=e.target.closest('[data-srch]');if(sr){var sp=sr.getAttribute('data-srch').split('|');FILTER.stavba=sp[0];FILTER.q='';if($('search'))$('search').value='';EXPANDED[zbvKey(sp[0],sp[1])]=true;renderTabulka();
     var c=document.querySelector('.zcard.open');if(c)c.scrollIntoView({block:'center'});return;}
   var st=e.target.closest('[data-star]');if(st){toggleDul(st.getAttribute('data-star'));return;}
@@ -1479,6 +1519,10 @@ $('list').addEventListener('click',function(e){
   var dl=e.target.closest('[data-del]');if(dl){var p2=dl.getAttribute('data-del').split('|');delZbv(p2[0],p2[1]);return;}
 });
 $('list').addEventListener('focusout',function(e){
+  var zx=e.target.closest('[data-ztxt]');if(zx){var z=zx.getAttribute('data-ztxt').split('|');zapSaveText(z[0],z[1],zx.textContent.trim());return;}
+  var zo=e.target.closest('[data-zotxt]');if(zo){var zz=zo.getAttribute('data-zotxt').split('|');zapSaveOdp(zz[0],zz[1],zz[2],zo.textContent.trim());return;}
+  var zk=e.target.closest('[data-zktxt]');if(zk){var zk1=zk.getAttribute('data-zktxt').split('|');zapSaveKom(zk1[0],zk1[1],zk1[2],zk1[3],zk.textContent.trim());return;}
+  var zkb=e.target.closest('[data-zktxtb]');if(zkb){var zk2=zkb.getAttribute('data-zktxtb').split('|');zapSaveKomB(zk2[0],zk2[1],zk2[2],zkb.textContent.trim());return;}
   var pz=e.target.closest('[data-pozn]');if(!pz)return;
   var p=pz.getAttribute('data-pozn').split('|'),key=zbvKey(p[0],p[1]),val=pz.value.trim();
   if(val===poznGet(key).text)return;
