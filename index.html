@@ -267,6 +267,16 @@
   .ph-tbl td.c{text-align:center} .ph-tbl td.cena{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .ph-row{cursor:pointer} .ph-row:hover td{background:#f1f3f5}
   .ph-tbl .vp{color:#b45309} .ph-tbl .ho{color:#15803d} .ph-tbl .fa{color:#1d4ed8} .ph-tbl .bp{color:#dc2626;font-weight:700}
+  .bil-ctl{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .bil-ctl select{margin-left:5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--txt);font-size:13px}
+  .bil-sub{font-weight:400;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0}
+  .bil-empty{color:var(--muted);font-size:13px;padding:6px 2px 20px}
+  .bil-tbl .bil-row{cursor:pointer} .bil-tbl .bil-row:hover td{background:#f1f3f5} .bil-tbl .bil-row.open td{background:#eef2f7}
+  .bil-tbl .bil-m{font-weight:600}
+  .bil-tbl .bil-det{cursor:pointer;background:#fafbfc} .bil-tbl .bil-det:hover td{background:#f1f3f5}
+  .bil-tbl .bil-di{padding-left:16px;font-size:12.5px;color:var(--muted)}
+  .bil-tbl .bil-dt{color:var(--muted);font-size:11.5px;margin-left:6px}
+  .bil-tbl .bil-tot td{border-top:2px solid var(--line);border-bottom:0;font-weight:700;padding-top:9px}
   @media(max-width:760px){
     .cols{flex-direction:column}
     #stavby-side{flex:none;width:100%;position:static;max-height:none;flex-direction:row;overflow-x:auto;padding-bottom:4px}
@@ -318,6 +328,13 @@
   .iacts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
   .iacts .ok{background:var(--hotovo);border-color:var(--hotovo);color:#fff;font-weight:700}
   .iacts .no{color:var(--neg)}
+  /* založení nové stavby přímo ze schránky */
+  .newst{margin-top:10px;border:1px dashed #f59e0b;border-radius:10px;padding:10px 12px;background:rgba(245,158,11,.06)}
+  .newst .note{font-size:11.5px;color:var(--muted);line-height:1.55;margin-bottom:8px}
+  .newst .note b{color:var(--txt)}
+  .newst .nsrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .newst .ns-input{flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
+  .newst .ns-add{background:#f59e0b;border-color:#f59e0b;color:#fff;font-weight:700;white-space:nowrap}
   /* modal */
   #modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;padding:16px;z-index:30;overflow:auto}
   .mbox{background:var(--card);border:1px solid var(--line);border-radius:14px;width:100%;max-width:640px;margin:auto;padding:18px}
@@ -535,6 +552,12 @@ var ZAP_Q='';               // zápis: fulltext hledání (úkol/odpověď/stavb
 var SHOW_KOS=false;         // zápis: zobrazit koš smazaných
 var ZAPIS_W=(function(){try{return parseInt(localStorage.getItem('zbv_zapis_w')||'372',10)||372;}catch(_){return 372;}})();  // šířka pravého panelu (zápis) v Tabulce
 var USEKY=['OZ JIH','MOSTY'];
+// Přehled → bilance schválených ZBV po měsících
+var SCHV_MILNIK='podpisObjednatele',SCHV_YEAR='',SCHV_USEK='',SCHV_OPEN={};
+var MILNIKY=[['podpisObjednatele','podpis objednatele'],['finalCistopis','finální čistopis'],['vyfakturovano','vyfakturováno']];
+var MESICE=['','leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+// vytáhne DD.MM.RRRR ze začátku hodnoty kroku → {y,m,key:'YYYY-MM',raw}
+function parseCzDate(str){var m=String(str||'').match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);if(!m)return null;var mo=+m[2],y=+m[3];if(mo<1||mo>12)return null;return {y:y,m:mo,key:y+'-'+(mo<10?'0'+mo:mo),raw:(+m[1])+'.'+mo+'.'+y};}
 var VIEW='tabulka';
 var STAVBA_INIT=false;
 var EXPANDED={};   // rozbalené ZBV karty (klíč zbvKey)
@@ -1240,6 +1263,7 @@ function renderPrehled(){
   STATES.forEach(function(s){html+='<div class="ph-card st-'+s[0]+'"><div class="phc-l">'+s[1]+'</div><div class="phc-n">'+agg[s[0]].n+' ZBV</div><div class="phc-h">'+fmtNum(agg[s[0]].h)+' Kč</div></div>';});
   html+='<div class="ph-card ph-tot"><div class="phc-l">Celkem (aktivní)</div><div class="phc-n">'+totN+' ZBV</div><div class="phc-h">'+fmtNum(totH)+' Kč</div></div></div>';
   if(arch.stavby)html+='<div class="ph-cards"><div class="ph-card ph-arch"><div class="phc-l">📦 Archiv — dokončené (počítá se zvlášť)</div><div class="phc-n">'+arch.stavby+' staveb · '+arch.n+' ZBV</div><div class="phc-h">'+fmtNum(arch.h)+' Kč</div></div></div>';
+  html+=bilanceHtml();
   html+='<div class="ph-head">Po stavbách (klik = otevřít stavbu)</div><div class="ph-tbl-wrap"><table class="ph-tbl"><thead><tr><th>Stavba</th><th>ZBV</th><th>V přípravě</th><th>U objednatele</th><th>Hotovo</th><th>Fakturováno</th><th>Hodnota celkem</th></tr></thead><tbody>';
   function cell(r,k,cls){return '<td class="cena '+cls+'">'+(r.st[k].n?r.st[k].n+' · '+fmtNum(r.st[k].h):'—')+'</td>';}
   function rowHtml(r){return '<tr class="ph-row" data-side="'+r.sid+'"><td class="ph-nm">'+(r.archiv?'📦 ':'')+esc(r.nazev)+(r.cislo?' <span class="zmeta">č. '+esc(r.cislo)+'</span>':'')+'</td>'
@@ -1250,6 +1274,43 @@ function renderPrehled(){
   if(arr.length){html+='<tr class="ph-sep"><td colspan="7">📦 Archiv — dokončené stavby (mimo součty nahoře)</td></tr>';arr.forEach(function(r){html+=rowHtml(r);});}
   html+='</tbody></table></div>';
   $('prehled').innerHTML=html;upd();
+}
+// bilance schválených ZBV po měsících (schváleno = zvolený milník, def. podpis objednatele)
+function bilanceHtml(){
+  var months={},yearsSet={};
+  stavbyOrdered().forEach(function(o){
+    if(SCHV_USEK&&(o.s.usek||'')!==SCHV_USEK)return;
+    zbvOrdered(o.sid).forEach(function(r){
+      var val=getVal(r.z,SCHV_MILNIK);if(!val)return;
+      var d=parseCzDate(val);if(!d)return;
+      yearsSet[d.y]=true;
+      if(SCHV_YEAR&&String(d.y)!==SCHV_YEAR)return;
+      var h=toNum(getVal(r.z,'hodnotaZBV'))||0;
+      var mo=months[d.key]||(months[d.key]={y:d.y,m:d.m,n:0,h:0,items:[]});
+      mo.n++;mo.h+=h;
+      mo.items.push({sid:o.sid,nazev:o.s.nazev||o.sid,cislo:getVal(r.z,'zbvCislo')||'',h:h,datum:d.raw});
+    });
+  });
+  var mk=Object.keys(months).sort().reverse();
+  var years=Object.keys(yearsSet).map(Number).sort(function(a,b){return b-a;});
+  var milL=(MILNIKY.filter(function(x){return x[0]===SCHV_MILNIK;})[0]||MILNIKY[0])[1];
+  var h='<div class="ph-head">✅ Schválené ZBV po měsících <span class="bil-sub">(schváleno = '+esc(milL)+(SCHV_USEK?', úsek '+esc(SCHV_USEK):'')+')</span></div>';
+  h+='<div class="bil-ctl">'
+    +'<label>schváleno podle <select id="sch-milnik">'+MILNIKY.map(function(x){return '<option value="'+x[0]+'"'+(SCHV_MILNIK===x[0]?' selected':'')+'>'+esc(x[1])+'</option>';}).join('')+'</select></label>'
+    +'<label>rok <select id="sch-rok"><option value="">všechny</option>'+years.map(function(y){return '<option value="'+y+'"'+(SCHV_YEAR===String(y)?' selected':'')+'>'+y+'</option>';}).join('')+'</select></label>'
+    +'<label>úsek <select id="sch-usek"><option value="">vše</option>'+USEKY.map(function(u){return '<option value="'+esc(u)+'"'+(SCHV_USEK===u?' selected':'')+'>'+esc(u)+'</option>';}).join('')+'</select></label>'
+    +'</div>';
+  if(!mk.length)return h+'<div class="bil-empty">Za zvolené období zatím žádné schválené ZBV (podle kroku „'+esc(milL)+'"). Jakmile u ZBV přibude datum tohoto kroku, objeví se tu automaticky.</div>';
+  var sumN=0,sumH=0;mk.forEach(function(k){sumN+=months[k].n;sumH+=months[k].h;});
+  h+='<div class="ph-tbl-wrap"><table class="ph-tbl bil-tbl" style="min-width:420px"><thead><tr><th>Měsíc</th><th style="text-align:center">Schváleno ZBV</th><th style="text-align:right">Hodnota</th></tr></thead><tbody>';
+  mk.forEach(function(k){var mo=months[k],open=!!SCHV_OPEN[k];
+    h+='<tr class="bil-row'+(open?' open':'')+'" data-schmonth="'+k+'"><td class="bil-m">'+(open?'▾ ':'▸ ')+MESICE[mo.m]+' '+mo.y+'</td><td class="c"><b>'+mo.n+'</b></td><td class="cena"><b>'+fmtNum(mo.h)+' Kč</b></td></tr>';
+    if(open)mo.items.sort(function(a,b){return b.h-a.h;}).forEach(function(it){
+      h+='<tr class="bil-det" data-side="'+it.sid+'"><td class="bil-di">↳ '+esc(it.nazev)+(it.cislo&&it.cislo!=='?'?' <span class="zmeta">ZBV '+esc(it.cislo)+'</span>':'')+' <span class="bil-dt">'+esc(it.datum)+'</span></td><td></td><td class="cena">'+fmtNum(it.h)+' Kč</td></tr>';
+    });
+  });
+  h+='<tr class="bil-tot"><td>Celkem'+(SCHV_YEAR?' '+SCHV_YEAR:'')+'</td><td class="c"><b>'+sumN+'</b></td><td class="cena"><b>'+fmtNum(sumH)+' Kč</b></td></tr>';
+  return h+'</tbody></table></div>';
 }
 
 // ╔══════════════════════ SCHRÁNKA (inbox) ══════════════════════╗
@@ -1265,7 +1326,8 @@ function renderInbox(){
     var zLabel=nv.zbvId==='new'||!nv.zbvId?'🆕 NOVÁ ZBV':('ZBV '+(getVal((DATA.zbv[nv.stavbaId]||{})[nv.zbvId]||{},'zbvCislo')||nv.zbvId));
     var krokL=nv.krok&&COL_BY_ID[nv.krok]?COL_BY_ID[nv.krok].l:(nv.krok||'—');
     var jist=(i.jistota||'střední').toLowerCase().replace('í','i').replace('á','a').replace('ř','r').replace('č','c').replace('ž','z').replace('š','s');
-    var low=jist==='nizka'||!nv.stavbaId||nv.stavbaId==='?';
+    var noStavba=!nv.stavbaId||nv.stavbaId==='?'||!DATA.stavby[nv.stavbaId];
+    var low=jist==='nizka'||noStavba;
     html+='<div class="icard'+(low?' low':'')+'">'
       +'<div class="ih"><span class="subj">'+esc(i.predmet||'(bez předmětu)')+'</span><span class="jist '+jist+'">jistota: '+esc(i.jistota||'střední')+'</span></div>'
       +'<div class="meta">'+esc(i.odesilatel||'')+' · '+esc(i.datum||i.prijato||'')+(i.gmailLink?' · <a href="'+esc(i.gmailLink)+'" target="_blank" style="color:var(--accent)">otevřít mail</a>':'')+'</div>'
@@ -1277,6 +1339,11 @@ function renderInbox(){
         +(nv.popis?'<div><span class="k">Popis:</span> '+esc(nv.popis)+'</div>':'')
         +(i.surovyVytah?'<div style="color:var(--muted);font-size:11.5px;margin-top:6px">'+esc(i.surovyVytah)+'</div>':'')
       +'</div>'
+      +(noStavba?'<div class="newst">'
+        +'<div class="note">⚠️ <b>Stavba nerozpoznána.</b> Dopiš <b>oficiální název stavby</b> (přesně jak zní v SoD, ne přezdívku) — podle něj se stavba <b>založí</b> a tento návrh se k ní rovnou přiřadí. <i>Pozn. pro doplňujícího: vždy piš oficiální název stavby, ať se maily příště párují samy.</i></div>'
+        +'<div class="nsrow"><input class="ns-input" data-nsid="'+o.id+'" placeholder="Oficiální název stavby, např. II/101 Dolní Břežany - Zbraslav">'
+        +'<button class="btn ns-add" data-inew="'+o.id+'">➕ Založit stavbu a potvrdit</button></div>'
+      +'</div>':'')
       +'<div class="iacts"><button class="btn ok" data-iok="'+o.id+'">✓ Potvrdit</button>'
         +'<button class="btn" data-ied="'+o.id+'">✏️ Upravit a potvrdit</button>'
         +'<button class="btn no" data-ino="'+o.id+'">✗ Zahodit</button></div>'
@@ -1325,6 +1392,31 @@ function inboxDiscard(id){
   var i=DATA.inbox[id];if(!i)return;
   i.stav='zahozeno';if(db)db.ref('/inbox/'+id+'/stav').set('zahozeno');
   if(!db){renderInbox();updateInboxBadge();}
+}
+// založí novou stavbu podle (oficiálního) názvu; vrátí její nové sid (nebo null)
+function createStavbaFromName(nazev){
+  nazev=(nazev||'').trim();if(!nazev)return null;
+  // pokud stavba s tímto názvem už existuje (case-insensitive), použij ji místo duplikátu
+  var exist=null;Object.keys(DATA.stavby).forEach(function(k){if(!exist&&deburr(DATA.stavby[k].nazev||'')===deburr(nazev))exist=k;});
+  if(exist)return exist;
+  var sid='s'+Date.now();
+  var maxP=0;Object.keys(DATA.stavby).forEach(function(k){var p=DATA.stavby[k].poradi||0;if(p>maxP)maxP=p;});
+  var s={nazev:nazev,cislo:'',aliases:[nazev],poradi:maxP+1};
+  DATA.stavby[sid]=s;
+  if(db)db.ref('/stavby/'+sid).set(s);
+  return sid;
+}
+// ze schránky: dopiš oficiální název → založ stavbu → přiřaď návrh → potvrď
+function inboxCreateStavbaConfirm(id,nazev){
+  var i=DATA.inbox[id];if(!i)return;
+  var sid=createStavbaFromName(nazev);
+  if(!sid){alert('Dopiš oficiální název stavby.');return;}
+  var nv=i.navrh||{};nv.stavbaId=sid;i.navrh=nv;
+  if(db)db.ref('/inbox/'+id+'/navrh/stavbaId').set(sid);
+  var res=applyNavrh(nv);
+  if(!res){alert('Nepodařilo se přiřadit návrh k nové stavbě.');return;}
+  i.stav='aplikovano';if(db)db.ref('/inbox/'+id+'/stav').set('aplikovano');
+  if(!db){renderInbox();updateInboxBadge();renderTabulka();}
 }
 
 // ╔══════════════════════ MODAL: úprava ZBV ══════════════════════╗
@@ -1431,10 +1523,11 @@ function openEditStavba(sid){
 // ── modal: upravit a potvrdit návrh ze schránky ──
 function openEditNavrh(id){
   var i=DATA.inbox[id];if(!i)return;var nv=i.navrh||{};
-  var stavbyOpts=stavbyOrdered().map(function(o){return '<option value="'+o.sid+'"'+(nv.stavbaId===o.sid?' selected':'')+'>'+esc(o.s.nazev||o.sid)+'</option>';}).join('');
+  var stavbyOpts=stavbyOrdered().filter(function(o){return !o.s.archiv||nv.stavbaId===o.sid;}).map(function(o){return '<option value="'+o.sid+'"'+(nv.stavbaId===o.sid?' selected':'')+'>'+esc(o.s.nazev||o.sid)+(o.s.archiv?' (archiv)':'')+'</option>';}).join('');
   var krokOpts='<option value="">(žádný krok)</option>'+COLS.filter(function(c){return c.krok;}).map(function(c){return '<option value="'+c.id+'"'+(nv.krok===c.id?' selected':'')+'>'+esc((c.g==='ozn'?'[Ozn] ':c.g==='proces'?'[Proces] ':'[Fakt] ')+c.l)+'</option>';}).join('');
   var h='<div class="mbox"><h3>Upravit návrh a potvrdit</h3>'
-    +'<label>Stavba</label><select id="n-stavba"><option value="">— vyber —</option>'+stavbyOpts+'</select>'
+    +'<label>Stavba</label><select id="n-stavba"><option value="">— vyber —</option><option value="__new__">➕ Nová stavba (dopiš níže)…</option>'+stavbyOpts+'</select>'
+    +'<div id="n-newstavba-wrap" class="hidden"><label>Oficiální název nové stavby</label><input id="n-newstavba" placeholder="Oficiální název stavby, např. II/101 Dolní Břežany - Zbraslav"><div style="font-size:11.5px;color:var(--muted);margin:4px 0 6px">Piš vždy <b>oficiální název stavby</b> (přesně jak zní v SoD, ne přezdívku) — podle něj se stavba založí a maily se příště párují samy.</div></div>'
     +'<label>ZBV</label><select id="n-zbv"></select>'
     +'<div class="mgrid3"><div>'+field('zbvCislo',nv.zbvCislo||'')+'</div><div>'+field('oznameniCislo',nv.oznameniCislo||'')+'</div><div>'+field('SO',nv.SO||'')+'</div></div>'
     +'<label>'+esc(COL_BY_ID.nazev?'název':'název')+'</label><input id="m-nazev" value="'+esc(nv.nazev||'')+'">'
@@ -1443,11 +1536,13 @@ function openEditNavrh(id){
     +'<div class="mgrid3"><div>'+field('zmenyZaporne',nv.zmenyZaporne||'')+'</div><div>'+field('zmenyKladne',nv.zmenyKladne||'')+'</div><div>'+field('hodnotaZBV',nv.hodnotaZBV||'')+'</div></div>'
     +'<div class="mbtns"><button class="btn" id="m-cancel">Zrušit</button><button class="btn save" id="n-save">✓ Potvrdit do tabulky</button></div></div>';
   $('modal').innerHTML=h;$('modal').classList.remove('hidden');
-  var selS=$('n-stavba');function fillZbv(){var sid=selS.value;var opts='<option value="new">🆕 Nová ZBV</option>';if(sid){zbvOrdered(sid).forEach(function(o){opts+='<option value="'+o.zid+'"'+(nv.zbvId===o.zid?' selected':'')+'>ZBV '+esc(getVal(o.z,'zbvCislo')||o.zid)+' — '+esc((o.z.nazev||'').slice(0,40))+'</option>';});}$('n-zbv').innerHTML=opts;}
+  var selS=$('n-stavba');function fillZbv(){var sid=selS.value;var isNew=sid==='__new__';$('n-newstavba-wrap').classList.toggle('hidden',!isNew);var opts='<option value="new">🆕 Nová ZBV</option>';if(sid&&!isNew){zbvOrdered(sid).forEach(function(o){opts+='<option value="'+o.zid+'"'+(nv.zbvId===o.zid?' selected':'')+'>ZBV '+esc(getVal(o.z,'zbvCislo')||o.zid)+' — '+esc((o.z.nazev||'').slice(0,40))+'</option>';});}$('n-zbv').innerHTML=opts;}
   selS.onchange=fillZbv;fillZbv();
   $('m-cancel').onclick=closeModal;
   $('n-save').onclick=function(){
-    var nv2={stavbaId:$('n-stavba').value,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:gv('n-hodnota'),
+    var sidSel=$('n-stavba').value;
+    if(sidSel==='__new__'){var nm=($('n-newstavba').value||'').trim();if(!nm){alert('Dopiš oficiální název nové stavby.');$('n-newstavba').focus();return;}sidSel=createStavbaFromName(nm);}
+    var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:gv('n-hodnota'),
       zbvCislo:gv('zbvCislo'),oznameniCislo:gv('oznameniCislo'),SO:gv('SO'),nazev:gv('nazev'),
       zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV')};
     if(!nv2.stavbaId){alert('Vyber stavbu.');return;}
@@ -1488,7 +1583,14 @@ function exportData(){
 $('exp-data').addEventListener('click',exportData);
 $('view').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setView(b.getAttribute('data-v'));[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});});
 function setView(v){VIEW=v;document.querySelector('.cols').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('prehled').classList.toggle('hidden',v!=='prehled');$('porady').classList.toggle('hidden',v!=='porady');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('legenda').classList.toggle('hidden',v==='schranka'||v==='porady');if(v==='schranka')renderInbox();else if(v==='prehled')renderPrehled();else if(v==='porady')renderPorady();else renderTabulka();}
-$('prehled').addEventListener('click',function(e){var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';setView('tabulka');[].forEach.call($('view').querySelectorAll('button'),function(x){x.classList.toggle('on',x.getAttribute('data-v')==='tabulka');});});
+$('prehled').addEventListener('click',function(e){
+  var mm=e.target.closest('[data-schmonth]');if(mm){var k=mm.getAttribute('data-schmonth');SCHV_OPEN[k]=!SCHV_OPEN[k];renderPrehled();return;}
+  var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';setView('tabulka');[].forEach.call($('view').querySelectorAll('button'),function(x){x.classList.toggle('on',x.getAttribute('data-v')==='tabulka');});});
+$('prehled').addEventListener('change',function(e){
+  if(e.target.id==='sch-milnik'){SCHV_MILNIK=e.target.value;SCHV_OPEN={};renderPrehled();return;}
+  if(e.target.id==='sch-rok'){SCHV_YEAR=e.target.value;SCHV_OPEN={};renderPrehled();return;}
+  if(e.target.id==='sch-usek'){SCHV_USEK=e.target.value;SCHV_OPEN={};renderPrehled();return;}
+});
 function archiveStavba(sid){var s=DATA.stavby[sid];if(!s)return;
   if(!s.archiv&&!confirm('Uklidit stavbu „'+(s.nazev||sid)+'" do archivu?\n\nPoužij, když je stavba DOKONČENÁ (vše vyfakturováno). Zmizí z panelu vlevo, ale zůstane v Archivu (dole) i v Přehledu — kdykoli ji vrátíš tlačítkem „vrátit z archivu".'))return;
   s.archiv=!s.archiv;
@@ -1549,6 +1651,7 @@ $('list').addEventListener('focusout',function(e){
   else{delete DATA.poznamky[key];if(db)db.ref('/poznamky/'+key).remove();}
 });
 $('inbox').addEventListener('click',function(e){
+  var nw=e.target.closest('[data-inew]');if(nw){var nid=nw.getAttribute('data-inew');var inp=$('inbox').querySelector('.ns-input[data-nsid="'+nid+'"]');var nm=inp?inp.value.trim():'';if(!nm){alert('Dopiš oficiální název stavby.');if(inp)inp.focus();return;}inboxCreateStavbaConfirm(nid,nm);return;}
   var ok=e.target.closest('[data-iok]');if(ok){inboxConfirm(ok.getAttribute('data-iok'));return;}
   var ed=e.target.closest('[data-ied]');if(ed){openEditNavrh(ed.getAttribute('data-ied'));return;}
   var no=e.target.closest('[data-ino]');if(no){inboxDiscard(no.getAttribute('data-ino'));return;}
