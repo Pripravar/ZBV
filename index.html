@@ -33,6 +33,16 @@
   .cols{display:flex;gap:12px;align-items:flex-start}
   #stavby-side{flex:0 0 236px;display:flex;flex-direction:column;gap:5px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:92px}
   .sb-sort{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--txt);font-size:12px;margin-bottom:2px}
+  .msel{display:inline-block;vertical-align:top}
+  .msel>summary{display:inline-block;padding:5px 7px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--txt);font-size:12px;cursor:pointer;white-space:nowrap;list-style:none;user-select:none}
+  .msel>summary::-webkit-details-marker{display:none} .msel>summary::marker{content:""}
+  .msel:not([open])>summary::after{content:" ▾";color:var(--muted)} .msel[open]>summary::after{content:" ▴";color:var(--muted)}
+  #stavby-side .msel{display:block;width:100%;margin-bottom:2px} #stavby-side .msel>summary{display:block;width:100%}
+  .msel-pop{margin:3px 0 4px;border:1px solid var(--line);border-radius:7px;background:var(--card);padding:4px;max-height:210px;overflow:auto}
+  .msel-pop .mopt{display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:5px;font-size:12.5px;cursor:pointer}
+  .msel-pop .mopt:hover{background:var(--head)} .msel-pop .mopt input{margin:0;flex:0 0 auto}
+  .msel-clr{font-size:11.5px;color:var(--accent);cursor:pointer;padding:3px 6px 5px;border-bottom:1px solid var(--line);margin-bottom:3px}
+  .msel-empty{font-size:12px;color:var(--muted);padding:5px}
   #list{flex:1;min-width:0}
   .sb-search{width:100%;background:var(--edit);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;margin-bottom:3px}
   .sb-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
@@ -545,8 +555,9 @@ var SKRYT_VYRESENE=false;   // zápis z porad — skrýt vyřešené body
 var SEKCE_SORT='poradi';    // řazení sekcí (staveb) v zápisu z porad
 var PRIO_ONLY=false;        // zápis — jen prioritní body
 var POR_MODE='prubezne';    // 'prubezne' = průběžný zápis po stavbách | 'porady' = porady po datech
-var RESITEL_FILTER='';      // filtr „jen stavby řešitele X" (panel + průběžný zápis), '' = vše
-var USEK_FILTER='';         // filtr úsek MOSTY / OZ JIH (panel + zápis), '' = vše
+var RESITEL_FILTER={};      // filtr řešitel (multi) — prázdné = vše
+var USEK_FILTER={};         // filtr úsek (multi) — prázdné = vše
+var MSEL_OPEN={};           // které filtrační dropdowny jsou rozbalené
 var ZAP_OD='';              // zápis: filtr „od data" (YYYY-MM-DD), '' = vše
 var ZAP_Q='';               // zápis: fulltext hledání (úkol/odpověď/stavba)
 var SHOW_KOS=false;         // zápis: zobrazit koš smazaných
@@ -575,6 +586,11 @@ function stavbaResitel(sid){
   Object.keys(zm).forEach(function(zid){var r=getVal(zm[zid],'resitel');if(!r)return;m[r]=(m[r]||0)+1;if(m[r]>bc){bc=m[r];best=r;}});
   return best;
 }
+// „Eliška" = „Eliška Havlátová" → sjednoť; řešitel může být víc lidí (oddělené čárkou)
+function normPerson(r){var d=deburr(r);if(d==='eliska'||d==='eliska havlatova'||d==='havlatova eliska')return 'Havlátová Eliška';return String(r||'').trim();}
+function splitPeople(s){return String(s||'').split(/\s*[,;]\s*/).map(function(x){return x.trim();}).filter(Boolean);}
+function stavbaResitelSet(sid){var out=[],seen={};splitPeople(stavbaResitel(sid)).forEach(function(p){p=normPerson(p);var k=deburr(p);if(p&&!seen[k]){seen[k]=1;out.push(p);}});return out;}
+function selActive(o){for(var k in o){if(o[k])return true;}return false;}
 function stavbyOrdered(){
   var arr=Object.keys(DATA.stavby).map(function(sid){var s=DATA.stavby[sid];return {sid:sid,s:s};});
   var L=function(o){return (o.s.lide)||{};};
@@ -592,16 +608,19 @@ function stavbyOrdered(){
 }
 function stavbyVisible(){return stavbyOrdered().filter(function(o){
   if(!SHOW_ARCHIV&&o.s.archiv)return false;
-  if(RESITEL_FILTER&&stavbaResitel(o.sid)!==RESITEL_FILTER)return false;
-  if(USEK_FILTER&&(o.s.usek||'')!==USEK_FILTER)return false;
+  if(selActive(RESITEL_FILTER)){var _rs=stavbaResitelSet(o.sid);if(!_rs.some(function(p){return RESITEL_FILTER[p];}))return false;}
+  if(selActive(USEK_FILTER)&&!USEK_FILTER[o.s.usek||''])return false;
   return true;});}
-function resiteleList(){var set={};Object.keys(DATA.stavby).forEach(function(sid){var r=stavbaResitel(sid);if(r)set[r]=1;});
+function resiteleList(){var set={};Object.keys(DATA.stavby).forEach(function(sid){stavbaResitelSet(sid).forEach(function(p){set[p]=1;});});
   return Object.keys(set).sort(function(a,b){return cmpTxt(a,b);});}
-function resitelSelHtml(id){var rl=resiteleList();if(!rl.length&&!RESITEL_FILTER)return '';
-  return '<select id="'+id+'" class="sb-sort" title="Filtr podle řešitele ZBV"><option value="">Řešitel: vše</option>'
-    +rl.map(function(r){return '<option value="'+esc(r)+'"'+(RESITEL_FILTER===r?' selected':'')+'>'+esc(r)+'</option>';}).join('')+'</select>';}
-function usekSelHtml(id){return '<select id="'+id+'" class="sb-sort" title="Filtr úsek (MOSTY / OZ JIH)"><option value="">Úsek: vše</option>'
-    +USEKY.map(function(u){return '<option value="'+esc(u)+'"'+(USEK_FILTER===u?' selected':'')+'>'+esc(u)+'</option>';}).join('')+'</select>';}
+// multi-výběr filtr (rozbalovací checkboxy). kind = 'resitel' | 'usek'
+function filterMultiHtml(kind,label,opts,sel){var n=opts.filter(function(o){return sel[o];}).length;
+  var body=opts.map(function(o){return '<label class="mopt"><input type="checkbox" data-msel="'+kind+'" value="'+esc(o)+'"'+(sel[o]?' checked':'')+'><span>'+esc(o)+'</span></label>';}).join('');
+  return '<details class="msel" data-mkind="'+kind+'"'+(MSEL_OPEN[kind]?' open':'')+'>'
+    +'<summary>'+esc(label)+': '+(n?'<b>'+n+'</b>':'vše')+'</summary>'
+    +'<div class="msel-pop">'+(n?'<div class="msel-clr" data-mselclr="'+kind+'">✕ zrušit výběr</div>':'')+(body||'<div class="msel-empty">nic k výběru</div>')+'</div></details>';}
+function resitelSelHtml(_id){var rl=resiteleList();if(!rl.length&&!selActive(RESITEL_FILTER))return '';return filterMultiHtml('resitel','Řešitel',rl,RESITEL_FILTER);}
+function usekSelHtml(_id){return filterMultiHtml('usek','Úsek',USEKY,USEK_FILTER);}
 function allDone(sid){var a=zbvOrdered(sid);if(!a.length)return false;return a.every(function(o){var s=effStav(o.z);return s==='hotovo'||s==='fakturovano';});}
 function zbvOrdered(sid){
   var m=DATA.zbv[sid]||{};
@@ -695,7 +714,9 @@ function renderTabulka(){
   rows.sort(function(a,b){return zbvSort(a.z)-zbvSort(b.z);});
   var cards=rows.map(function(r){return zbvCard(sid,r.zid,r.z);}).join('');
   var leftHtml=head+(cards||'<div class="empty">Žádné ZBV odpovídající filtru.</div>');
+  var _zpOld=document.querySelector('#list .ztab-zapis'),_zpTop=_zpOld?_zpOld.scrollTop:0;   // zachovej scroll pravého panelu při překreslení
   $('list').innerHTML='<div class="ztab-split"><div class="ztab-zbv">'+leftHtml+'</div><div class="ztab-drag" id="ztab-drag" title="táhni pro změnu šířky"></div>'+zapisPanelHtml(sid)+'</div>';
+  var _zpNew=document.querySelector('#list .ztab-zapis');if(_zpNew&&_zpTop)_zpNew.scrollTop=_zpTop;
   upd();
 }
 // globální hledání napříč VŠEMI stavbami (číslo ZBV, SO, název, popis, příčina, název stavby)
@@ -771,7 +792,7 @@ function buildStavbySide(){
   stavbyVisible().forEach(function(o){
     var c=statCounts(o.sid),t=c.total||1;
     function seg(k){return c[k]?'<i class="seg-'+k+'" style="width:'+(c[k]/t*100)+'%"></i>':'';}
-    var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'',re=stavbaResitel(o.sid);
+    var pr=o.s.lide&&o.s.lide.pripravar?o.s.lide.pripravar:'',re=stavbaResitelSet(o.sid).join(', ');
     var subP=[];if(o.s.cislo)subP.push('č. '+esc(o.s.cislo));if(re)subP.push('Ř '+esc(re));if(pr)subP.push('PŘ '+esc(pr));
     html+='<div class="sb-item'+(FILTER.stavba===o.sid?' on':'')+(o.s.archiv?' arch':'')+'" data-side="'+o.sid+'">'
       +'<div class="nm">'+(o.s.archiv?'📦 ':'')+esc(o.s.nazev||o.sid)+'<span class="cnt">'+c.total+'</span></div>'
@@ -1083,8 +1104,8 @@ function renderZapis(){
   var el=$('porady');if(!el)return;var Z=zapEnsure();
   var odTs=ZAP_OD?Date.parse(ZAP_OD):0,q=deburr(ZAP_Q);
   var seks=sekceSorted(Z).filter(function(o){var id=secStavbaId(o.s);
-    if(RESITEL_FILTER&&(!id||stavbaResitel(id)!==RESITEL_FILTER))return false;
-    if(USEK_FILTER&&(!id||(DATA.stavby[id].usek||'')!==USEK_FILTER))return false;
+    if(selActive(RESITEL_FILTER)&&(!id||!stavbaResitelSet(id).some(function(p){return RESITEL_FILTER[p];})))return false;
+    if(selActive(USEK_FILTER)&&(!id||!USEK_FILTER[(DATA.stavby[id].usek||'')]))return false;
     return true;});
   var anyF=SKRYT_VYRESENE||PRIO_ONLY||odTs||q;
   var visN=0,open=0,prio=0;seks.forEach(function(o){var sm=q&&secNameQ(o.s,q);
@@ -1236,7 +1257,7 @@ function openStavbaFromZapis(sid){if(!DATA.stavby[sid])return;FILTER.stavba=sid;
 // proklik: z Tabulky skoč na stavbu v průběžném zápisu (založ sekci, když chybí) a odscroluj na ni
 function gotoZapisStavba(sid){var Z=zapEnsure();
   var skid=null;sekceOrdered(Z).forEach(function(o){if(skid)return;if(secStavbaId(o.s)===sid)skid=o.skid;});
-  RESITEL_FILTER='';USEK_FILTER='';ZAP_OD='';POR_MODE='prubezne';
+  RESITEL_FILTER={};USEK_FILTER={};ZAP_OD='';POR_MODE='prubezne';
   if(!skid){zapAddStavba(sid);sekceOrdered(Z).forEach(function(o){if(secStavbaId(o.s)===sid)skid=o.skid;});}
   setTab('porady');
   var el=document.querySelector('.psek[data-skid="'+skid+'"]');
@@ -1597,11 +1618,13 @@ function archiveStavba(sid){var s=DATA.stavby[sid];if(!s)return;
   if(db)db.ref('/stavby/'+sid+'/archiv').set(s.archiv?true:null);
   if(s.archiv&&!SHOW_ARCHIV){var v=stavbyVisible();FILTER.stavba=v.length?v[0].sid:'';}
   renderTabulka();}
+function mselToggle(kind,val,on){var o=kind==='resitel'?RESITEL_FILTER:USEK_FILTER;if(on)o[val]=1;else delete o[val];MSEL_OPEN[kind]=true;}
 $('stavby-side').addEventListener('change',function(e){
   if(e.target.id==='sb-sort'){SB_SORT=e.target.value;buildStavbySide();return;}
-  if(e.target.id==='sb-resitel'){RESITEL_FILTER=e.target.value;buildStavbySide();return;}
-  if(e.target.id==='sb-usek'){USEK_FILTER=e.target.value;buildStavbySide();}});
+  if(e.target.dataset&&e.target.dataset.msel){mselToggle(e.target.dataset.msel,e.target.value,e.target.checked);buildStavbySide();return;}});
+$('stavby-side').addEventListener('toggle',function(e){if(e.target.classList&&e.target.classList.contains('msel'))MSEL_OPEN[e.target.getAttribute('data-mkind')]=e.target.open;},true);
 $('stavby-side').addEventListener('click',function(e){
+  var mc=e.target.closest('[data-mselclr]');if(mc){var k=mc.getAttribute('data-mselclr');if(k==='resitel')RESITEL_FILTER={};else USEK_FILTER={};MSEL_OPEN[k]=true;buildStavbySide();return;}
   if(e.target.closest('#sb-arch')){SHOW_ARCHIV=!SHOW_ARCHIV;buildStavbySide();return;}
   var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';renderTabulka();});
 $('list').addEventListener('click',function(e){
@@ -1657,6 +1680,7 @@ $('inbox').addEventListener('click',function(e){
   var no=e.target.closest('[data-ino]');if(no){inboxDiscard(no.getAttribute('data-ino'));return;}
 });
 $('porady').addEventListener('click',function(e){
+  var mc=e.target.closest('[data-mselclr]');if(mc){var k=mc.getAttribute('data-mselclr');if(k==='resitel')RESITEL_FILTER={};else USEK_FILTER={};MSEL_OPEN[k]=true;renderPorady();return;}
   var md=e.target.closest('[data-pmode]');if(md){POR_MODE=md.getAttribute('data-pmode');renderPorady();return;}
   if(e.target.closest('#por-print')){if(POR_MODE==='porady')porPrint();else zapPrint();return;}
   if(e.target.closest('#kos-toggle')){SHOW_KOS=!SHOW_KOS;renderPorady();return;}
@@ -1698,10 +1722,10 @@ $('porady').addEventListener('input',function(e){
   if(e.target.id==='zap-search'){ZAP_Q=e.target.value;var c=e.target.selectionStart;renderPorady();
     var ni=document.getElementById('zap-search');if(ni){ni.focus();try{ni.setSelectionRange(c,c);}catch(_){}}}
 });
+$('porady').addEventListener('toggle',function(e){if(e.target.classList&&e.target.classList.contains('msel'))MSEL_OPEN[e.target.getAttribute('data-mkind')]=e.target.open;},true);
 $('porady').addEventListener('change',function(e){
   if(e.target.id==='por-sort'){SEKCE_SORT=e.target.value;renderPorady();return;}
-  if(e.target.id==='zap-resitel'){RESITEL_FILTER=e.target.value;renderPorady();return;}
-  if(e.target.id==='zap-usek'){USEK_FILTER=e.target.value;renderPorady();return;}
+  if(e.target.dataset&&e.target.dataset.msel){mselToggle(e.target.dataset.msel,e.target.value,e.target.checked);renderPorady();return;}
   if(e.target.id==='zap-od'){ZAP_OD=e.target.value;renderPorady();return;}
   var pk=e.target.closest('[data-ppick]');if(pk&&e.target.value){porAddStavba(pk.getAttribute('data-ppick'),e.target.value);return;}
   if(e.target.closest('[data-zpick]')&&e.target.value){zapAddStavba(e.target.value);return;}
@@ -1729,7 +1753,13 @@ function normalize(raw){
     porady:(raw&&raw.porady)||{},zapis:(raw&&raw.zapis)||{sekce:{}}};
 }
 function startApp(){if(started)return;started=true;showApp();
-  try{db.ref('/').on('value',function(snap){DATA=normalize(snap.val()||{});if(VIEW==='schranka')renderInbox();else if(VIEW==='prehled')renderPrehled();else if(VIEW==='porady'){if(!document.activeElement||!document.activeElement.closest||!document.activeElement.closest('#porady'))renderPorady();}else renderTabulka();updateInboxBadge();},function(){});}catch(e){}
+  try{db.ref('/').on('value',function(snap){DATA=normalize(snap.val()||{});
+    var ae=document.activeElement,editing=ae&&ae.closest&&(ae.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName));
+    if(VIEW==='schranka')renderInbox();
+    else if(VIEW==='prehled')renderPrehled();
+    else if(VIEW==='porady'){if(!(editing&&ae.closest('#porady')))renderPorady();}
+    else {if(!(editing&&ae.closest('#list')))renderTabulka();}   // need-když píšu do zápisu v Tabulce, nepřekresluj (jinak scroll skáče)
+    updateInboxBadge();},function(){});}catch(e){}
 }
 
 if(DEMO_MODE){
