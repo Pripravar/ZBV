@@ -1358,6 +1358,7 @@ function renderInbox(){
         +'<div><span class="k">Krok:</span> <b>'+esc(krokL)+'</b></div>'
         +'<div><span class="k">Hodnota:</span> <b>'+esc(nv.hodnota||'')+'</b></div>'
         +(nv.popis?'<div><span class="k">Popis:</span> '+esc(nv.popis)+'</div>':'')
+        +((nv.kontakty&&nv.kontakty.length)?'<div><span class="k">Kontakty:</span> '+nv.kontakty.map(function(k){return '<b>'+esc((k.role==='TDS'||k.role==='TDI')?'TDS':k.role)+'</b> '+esc(k.jmeno||'')+(k.mail?' &lt;'+esc(k.mail)+'&gt;':'');}).join(' · ')+' <span style="color:var(--muted)">(doplní se do detailu stavby, jen prázdná pole)</span></div>':'')
         +(i.surovyVytah?'<div style="color:var(--muted);font-size:11.5px;margin-top:6px">'+esc(i.surovyVytah)+'</div>':'')
       +'</div>'
       +(noStavba?'<div class="newst">'
@@ -1400,6 +1401,12 @@ function applyNavrh(nv){
   // částky
   ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
   if(db)db.ref('/zbv/'+sid+'/'+zid).set(z);
+  // kontakty AD / TDS z mailu → doplň do detailu stavby (jen prázdná pole, nepřepisuj; TDS = role TDI)
+  if(nv.kontakty&&nv.kontakty.length){var st=DATA.stavby[sid];if(st){st.lide=st.lide||{};st.lideMail=st.lideMail||{};var ch=false;
+    nv.kontakty.forEach(function(k){var role=(k.role==='TDS'||k.role==='TDI')?'TDI':(k.role==='AD'?'AD':null);if(!role)return;
+      if(k.jmeno&&!st.lide[role]){st.lide[role]=k.jmeno;ch=true;}
+      if(k.mail&&!st.lideMail[role]){st.lideMail[role]=k.mail;ch=true;}});
+    if(ch&&db)db.ref('/stavby/'+sid).update({lide:st.lide,lideMail:st.lideMail});}}
   return {sid:sid,zid:zid};
 }
 function inboxConfirm(id){
@@ -1565,7 +1572,8 @@ function openEditNavrh(id){
     if(sidSel==='__new__'){var nm=($('n-newstavba').value||'').trim();if(!nm){alert('Dopiš oficiální název nové stavby.');$('n-newstavba').focus();return;}sidSel=createStavbaFromName(nm);}
     var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:gv('n-hodnota'),
       zbvCislo:gv('zbvCislo'),oznameniCislo:gv('oznameniCislo'),SO:gv('SO'),nazev:gv('nazev'),
-      zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV')};
+      zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV'),
+      popis:nv.popis,kontakty:nv.kontakty||null};
     if(!nv2.stavbaId){alert('Vyber stavbu.');return;}
     var res=applyNavrh(nv2);if(!res)return;
     DATA.inbox[id].stav='aplikovano';if(db)db.ref('/inbox/'+id+'/stav').set('aplikovano');
