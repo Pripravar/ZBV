@@ -35,6 +35,7 @@
   .btn{background:var(--edit);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
   .btn:hover{background:#eceef1}
   .btn:active{transform:translateY(1px)}
+  a.hub-btn{text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap;flex:0 0 auto}
   .btn-add{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
   .ctrl{background:var(--edit);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 12px;font-size:14px}
   #search{flex:1;min-width:150px;max-width:280px}
@@ -400,6 +401,7 @@
 <div id="demo" class="demo-bar hidden">UKÁZKOVÝ REŽIM — data jsou demo (migrace z Excelu), změny se neukládají.</div>
 
 <header class="hidden" id="topbar">
+  <a class="btn hub-btn" href="https://pripravar.github.io/OZ-JIH/" title="Zpět na rozcestník aplikací">‹ Aplikace</a>
   <div><h1>ZBV — přehled změn během výstavby</h1><div class="sub" id="updated">M - SILNICE a.s.</div></div>
   <div class="spacer"></div>
   <div class="seg" id="view"><button data-v="tabulka" class="on">📋 Tabulka</button><button data-v="prehled">📊 Přehled</button><button data-v="porady">🗓️ Porady</button><button data-v="schranka">📥 Schránka<span id="ibx-count" class="ibadge hidden">0</span></button></div>
