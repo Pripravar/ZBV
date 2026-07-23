@@ -95,6 +95,11 @@
   .smetric .l{font-size:11px;color:var(--muted)} .smetric .v{font-size:15px;font-weight:700;margin-top:2px}
   .smetric .ok{font-size:11px;color:var(--pos);font-weight:400} .smetric .warn{font-size:11px;color:var(--neg);font-weight:400}
   .smetric .sub-h{font-size:12px;font-weight:400;color:var(--muted)}
+  .smetric .v.v-pos{color:var(--pos)} .smetric .v.v-neg{color:var(--neg)}
+  .smetric .lim-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.35}
+  .lim-prep{color:var(--vproces)}
+  .lim-warn{margin-top:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:8px 10px;font-size:12px;color:#9a3412;line-height:1.4}
+  :root[data-theme="dark"] .lim-warn{background:#2a2214;border-color:#7c5312;color:#fbbf24}
   .smetric.st-vproces{box-shadow:inset 4px 0 0 var(--vproces)} .smetric.st-hotovo{box-shadow:inset 4px 0 0 var(--hotovo)}
   .smetric.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .smetric.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)} .smetric.st-evidovano{box-shadow:inset 4px 0 0 var(--evidovano)}
   /* ZBV karty */
@@ -681,11 +686,22 @@ function statCounts(sid){
   return c;
 }
 // limity dle ZZVZ §222 (z ceny díla): sk.3+4 = 30 %, sk.5 = 15 %
+// Do limitu se počítají VŠECHNY ZBV ve skupině (i koncepty/evidované), ať je vidět, kolik zbývá
+// na další zatím neoznámené změny. Zvlášť se ukazuje část „v přípravě" (zatím neschválené) a
+// ZBV, které ještě nemají zařazenou skupinu (nepočítají se — je potřeba je ručně zařadit).
 function limity(s,sid){
-  var cena=toNum(s.cenaDila),cer34=0,cer5=0;
-  zbvOrdered(sid).forEach(function(o){var sk=String(getVal(o.z,'skupina'));var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);
-    if(/3|4/.test(sk))cer34+=abs; if(/5/.test(sk))cer5+=abs;});
-  return {cena:cena,l34:cena!=null?cena*0.30:null,l5:cena!=null?cena*0.15:null,cer34:cer34,cer5:cer5};
+  var cena=toNum(s.cenaDila),cer34=0,cer5=0,prep34=0,prep5=0,bezSk={n:0,sum:0};
+  zbvOrdered(sid).forEach(function(o){
+    var sk=String(getVal(o.z,'skupina')||'').trim();
+    var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);
+    var st=effStav(o.z), isPrep=(st!=='hotovo'&&st!=='fakturovano');   // v přípravě = zatím neschválené
+    var has34=/3|4/.test(sk), has5=/5/.test(sk);
+    if(has34){cer34+=abs; if(isPrep)prep34+=abs;}
+    if(has5){cer5+=abs; if(isPrep)prep5+=abs;}
+    if(!sk&&abs>0){bezSk.n++; bezSk.sum+=abs;}   // má hodnotu, ale žádnou skupinu → nezapočítané
+  });
+  return {cena:cena,l34:cena!=null?cena*0.30:null,l5:cena!=null?cena*0.15:null,
+    cer34:cer34,cer5:cer5,prep34:prep34,prep5:prep5,bezSk:bezSk};
 }
 // stadium = poslední vyplněný krok (v pořadí životního cyklu) = kde to teď je
 function stadium(z){
@@ -716,9 +732,17 @@ function renderTabulka(){
   var L=limity(s,sid),sc=statCounts(sid),sm=statMoney(sid);
   var metr='<div class="smetrics">';
   metr+='<div class="smetric"><div class="l">Cena díla (vysoutěženo)</div><div class="v">'+(L.cena!=null?fmtNum(L.cena)+' Kč':'— zadej')+'</div></div>';
-  if(L.l34!=null)metr+='<div class="smetric"><div class="l">Limit sk. 3+4 · 30 %</div><div class="v">'+fmtNum(L.l34)+' <span class="'+(L.cer34<=L.l34?'ok':'warn')+'">zbývá '+fmtNum(L.l34-L.cer34)+'</span></div></div>';
-  if(L.l5!=null)metr+='<div class="smetric"><div class="l">Limit sk. 5 · 15 %</div><div class="v">'+fmtNum(L.l5)+' <span class="'+(L.cer5<=L.l5?'ok':'warn')+'">zbývá '+fmtNum(L.l5-L.cer5)+'</span></div></div>';
+  function limCard(lab,lim,cer,prep){
+    var zb=lim-cer;
+    var sub='z '+fmtNum(lim)+' · čerpáno '+fmtNum(cer)+(prep>0?' <span class="lim-prep">(v přípravě '+fmtNum(prep)+')</span>':'');
+    return '<div class="smetric"><div class="l">'+lab+' · zbývá</div>'
+      +'<div class="v '+(zb>=0?'v-pos':'v-neg')+'">'+fmtNum(zb)+' Kč</div>'
+      +'<div class="lim-sub">'+sub+'</div></div>';
+  }
+  if(L.l34!=null)metr+=limCard('Limit sk. 3+4 · 30 %',L.l34,L.cer34,L.prep34);
+  if(L.l5!=null)metr+=limCard('Limit sk. 5 · 15 %',L.l5,L.cer5,L.prep5);
   metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
+  if(L.cena!=null&&L.bezSk.n>0)metr+='<div class="lim-warn">⚠️ <b>'+L.bezSk.n+' ZBV má hodnotu, ale nezařazenou skupinu</b> ('+fmtNum(L.bezSk.sum)+' Kč) — nepočítá se do limitu. Zařaď je přes „upravit ZBV" → pole <b>skupina</b>, ať vidíš skutečně zbývající limit na další změny.</div>';
   // součty po stavech v této stavbě (počet · peníze)
   var STS=[['evidovano','Evidováno'],['vproces','V přípravě'],['bezprogresu','Na připomínkách u objednatele'],['hotovo','Hotovo'],['fakturovano','Fakturováno']];
   var smet2='<div class="smetrics">'+STS.map(function(p){return '<div class="smetric st-'+p[0]+'"><div class="l">'+p[1]+'</div><div class="v">'+sm[p[0]].n+' <span class="sub-h">'+fmtNum(sm[p[0]].h)+' Kč</span></div></div>';}).join('')+'</div>';
