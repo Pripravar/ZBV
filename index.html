@@ -100,6 +100,27 @@
   .lim-prep{color:var(--vproces)}
   .lim-warn{margin-top:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:8px 10px;font-size:12px;color:#9a3412;line-height:1.4}
   :root[data-theme="dark"] .lim-warn{background:#2a2214;border-color:#7c5312;color:#fbbf24}
+  /* ── OZNÁMENÍ formulář ── */
+  .ozn-wrap{max-width:1000px;margin:0 auto}
+  .ozn-top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+  .ozn-h{font-size:17px;font-weight:700} .ozn-sub{font-size:12.5px;color:var(--muted);margin-top:3px;max-width:640px}
+  .ozn-top .btn-add,.ozn-actions{margin-left:auto}
+  .ozn-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .ozn-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+  .ozn-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 12px;cursor:pointer}
+  .ozn-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  .ozn-c-nm{font-weight:700;font-size:14px} .ozn-c-desc{font-size:12px;color:var(--muted);margin:4px 0;line-height:1.4} .ozn-c-meta{font-size:11px;color:var(--muted)}
+  .ozn-tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  .ozn-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;background:var(--card)}
+  .ozn-tbl td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}
+  .ozn-num{width:34px;text-align:center;font-weight:700;background:var(--head)}
+  .ozn-sek{width:150px;font-weight:700;background:var(--head)}
+  .ozn-lab{width:270px;color:var(--txt);background:var(--edit);font-size:12.5px;line-height:1.35}
+  .ozn-fill{padding:4px !important}
+  .ozn-in{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--txt);font:inherit;font-size:13px;padding:6px 8px;resize:vertical}
+  .ozn-in:focus{outline:none;border-color:var(--accent)}
+  .ozn-sel{resize:none} .ozn-note{font-size:12px;color:var(--muted);margin:10px 2px;line-height:1.4}
+  @media(max-width:640px){.ozn-lab{width:auto} .ozn-sek{width:auto}}
   .smetric.st-vproces{box-shadow:inset 4px 0 0 var(--vproces)} .smetric.st-hotovo{box-shadow:inset 4px 0 0 var(--hotovo)}
   .smetric.st-fakturovano{box-shadow:inset 4px 0 0 var(--fakturovano)} .smetric.st-bezprogresu{box-shadow:inset 4px 0 0 var(--bezprogresu)} .smetric.st-evidovano{box-shadow:inset 4px 0 0 var(--evidovano)}
   /* ZBV karty */
@@ -409,7 +430,7 @@
   <a class="btn hub-btn" href="https://pripravar.github.io/OZ-JIH/" title="Zpět na rozcestník aplikací">‹ Aplikace</a>
   <div><h1>ZBV — přehled změn během výstavby</h1><div class="sub" id="updated">M - SILNICE a.s.</div></div>
   <div class="spacer"></div>
-  <div class="seg" id="view"><button data-v="tabulka" class="on">📋 Tabulka</button><button data-v="prehled">📊 Přehled</button><button data-v="porady">🗓️ Porady</button><button data-v="schranka">📥 Schránka<span id="ibx-count" class="ibadge hidden">0</span></button></div>
+  <div class="seg" id="view"><button data-v="tabulka" class="on">📋 Tabulka</button><button data-v="prehled">📊 Přehled</button><button data-v="porady">🗓️ Porady</button><button data-v="oznameni">📄 Oznámení</button><button data-v="schranka">📥 Schránka<span id="ibx-count" class="ibadge hidden">0</span></button></div>
   <button class="btn" id="exp-data" title="Stáhnout zálohu všech dat (stavby, ZBV, zápis, poznámky) jako JSON">⬇️ Záloha</button>
   <button class="btn" id="theme-toggle" title="Přepnout světlý / tmavý režim">🌙</button>
   <button class="btn" id="logout">Odhlásit</button>
@@ -441,6 +462,7 @@
   </div>
   <div id="inbox" class="hidden"></div>
   <div id="prehled" class="hidden"></div>
+  <div id="oznameni" class="hidden"></div>
   <div id="porady" class="hidden"></div>
 </div>
 
@@ -848,6 +870,90 @@ function buildStavbySide(){
   if(archN)html+='<div class="sb-arch-btn" id="sb-arch">'+(SHOW_ARCHIV?'▾ skrýt archiv':'📦 Archiv ('+archN+')')+'</div>';
   el.innerHTML=html;
 }
+// ╔══════════════════════ OZNÁMENÍ — formulář (stavbyvedoucí → podklad pro přípraváře) ══════════════════════╗
+var OZN_OPEN=null;   // null = seznam | id existujícího | 'new'
+var OZN_SEKCE=[
+  {n:'1',t:'Úvod',f:[
+    ['adresat','Adresát oznámení',1],
+    ['kontaktyVyjadreni','Kontakty (e-mail) na osoby, které se mají vyjádřit ke konceptu oznámení (TDS, Objednatel atd.)',2],
+    ['kontaktPripravar','Kontakt na přípraváře',1]]},
+  {n:'2',t:'Popis nové skutečnosti',f:[
+    ['popisStavu','Popis zjištěného stavu a oznamovaných skutečností',4],
+    ['specifikaceSO','Specifikace, kterého SO a místa se skutečnosti týkají',2]]},
+  {n:'3',t:'Původní řešení',f:[
+    ['puvodniReseni','Popis původního řešení dle PD',3],
+    ['duvodyNevhodne','Důvody, proč není původní řešení vhodné',3],
+    ['dusledky','Možné důsledky, pokud by situace nebyla řešena',3]]},
+  {n:'4',t:'Návrh řešení',f:[
+    ['navrhReseni','Popis navrhovaného řešení',4]]},
+  {n:'5',t:'Pokyn',f:[
+    ['terminPokyn','Termín, do kdy musí objednatel vydat pokyn',1]]},
+  {n:'6',t:'Rozpočet a harmonogram',f:[
+    ['dopadRozpocet','Dopad do rozpočtu',2],
+    ['dopadHarmonogram','Dopad do harmonogramu',2]]},
+  {n:'7',t:'Přílohy a podklady (soubory vložit do e-mailu)',f:[
+    ['prilohySoD','Smlouva o dílo',1],
+    ['prilohyDalsi','Rozpočet, zápisy ze SD, situační výkresy, protokoly nebo jiné relevantní podklady',3]]}
+];
+var OZN_FIELDS=[];OZN_SEKCE.forEach(function(s){s.f.forEach(function(x){OZN_FIELDS.push(x[0]);});});
+function oznList(){return Object.keys(DATA.oznameni||{}).map(function(id){return {id:id,o:DATA.oznameni[id]||{}};}).sort(function(a,b){return (b.o.ts||0)-(a.o.ts||0);});}
+function oznPrefill(sid){var s=DATA.stavby[sid]||{},l=s.lide||{},m=s.lideMail||{};
+  function osoba(r){return (l[r]||'')+((l[r]&&m[r])?' <'+m[r]+'>':(m[r]||''));}
+  var kv=[];['TDI','objednatel','AD'].forEach(function(r){var v=osoba(r).trim();if(v)kv.push(v);});
+  return {adresat:osoba('objednatel').trim(),kontaktyVyjadreni:kv.join('; '),kontaktPripravar:osoba('pripravar').trim()};}
+function renderOznameni(){var el=$('oznameni');if(!el)return;el.innerHTML=(OZN_OPEN===null)?oznListHtml():oznFormHtml(OZN_OPEN);}
+function oznListHtml(){
+  var arr=oznList();
+  var h='<div class="ozn-wrap"><div class="ozn-top"><div><div class="ozn-h">📄 Oznámení změny — formuláře</div>'
+    +'<div class="ozn-sub">Stavbyvedoucí vyplní podklad pro oznámení změny objednateli. Uloží se sem — přípravář/kolega si ho pak vezme, nebo se stáhne jako Word.</div></div>'
+    +'<button class="btn btn-add" id="ozn-new">+ Nové oznámení</button></div>';
+  if(!arr.length){h+='<div class="empty">Zatím žádné oznámení. Založ přes „+ Nové oznámení".</div></div>';return h;}
+  h+='<div class="ozn-cards">';
+  arr.forEach(function(o){var d=o.o;
+    h+='<div class="ozn-card" data-oznopen="'+o.id+'"><div class="ozn-c-nm">'+esc(d.stavbaNazev||'(bez stavby)')+'</div>'
+      +'<div class="ozn-c-desc">'+esc((d.popisStavu||'').replace(/\s+/g,' ').slice(0,130)||'— zatím bez popisu —')+'</div>'
+      +'<div class="ozn-c-meta">'+esc(d.datum||'')+(d.autor?' · '+esc(d.autor):'')+(d.upravenoTs?' · upraveno':'')+'</div></div>';});
+  h+='</div></div>';return h;}
+function oznFormHtml(id){
+  var isNew=(id==='new'),d=isNew?{}:(DATA.oznameni[id]||{}),sidSel=d.stavbaId||'';
+  var stOpts='<option value="">— vyber stavbu —</option>'+stavbyOrdered().map(function(o){return '<option value="'+o.sid+'"'+(sidSel===o.sid?' selected':'')+'>'+esc(o.s.nazev||o.sid)+'</option>';}).join('');
+  var h='<div class="ozn-wrap"><div class="ozn-top"><div class="ozn-h">📄 '+(isNew?'Nové oznámení':'Oznámení')+(d.stavbaNazev?' — '+esc(d.stavbaNazev):'')+'</div>'
+    +'<div class="ozn-actions"><button class="btn" id="ozn-back">← seznam</button>'
+    +'<button class="btn" id="ozn-word">⬇️ Word</button>'
+    +(isNew?'':'<button class="btn no" id="ozn-del">🗑️ Smazat</button>')
+    +'<button class="btn btn-add" id="ozn-save">💾 Uložit</button></div></div>';
+  h+='<div class="ozn-tblwrap"><table class="ozn-tbl"><tbody>';
+  h+='<tr><td class="ozn-num"></td><td class="ozn-sek">Stavba</td><td class="ozn-lab"></td><td class="ozn-fill"><select id="ozn-stavba" class="ozn-in ozn-sel">'+stOpts+'</select></td></tr>';
+  OZN_SEKCE.forEach(function(s){s.f.forEach(function(x,i){
+    h+='<tr>'+(i===0?'<td class="ozn-num" rowspan="'+s.f.length+'">'+s.n+'</td><td class="ozn-sek" rowspan="'+s.f.length+'">'+esc(s.t)+'</td>':'')
+      +'<td class="ozn-lab">'+esc(x[1])+'</td>'
+      +'<td class="ozn-fill"><textarea class="ozn-in" data-oznf="'+x[0]+'" rows="'+(x[2]||2)+'" placeholder="…">'+esc(d[x[0]]||'')+'</textarea></td></tr>';});});
+  h+='</tbody></table></div><div class="ozn-note">💡 „Uložit" zapíše oznámení sem (kolega ho pak najde v seznamu). „Word" stáhne vyplněný formulář jako dokument (i s neuloženými změnami). Kontakty se předvyplní z detailu stavby, dají se přepsat.</div></div>';
+  return h;}
+function oznCollect(){var d={};OZN_FIELDS.forEach(function(f){var el=document.querySelector('#oznameni [data-oznf="'+f+'"]');d[f]=el?el.value.trim():'';});
+  var sel=$('ozn-stavba');d.stavbaId=sel?sel.value:'';d.stavbaNazev=(d.stavbaId&&DATA.stavby[d.stavbaId])?(DATA.stavby[d.stavbaId].nazev||''):'';return d;}
+function oznSave(){var d=oznCollect();var id=(OZN_OPEN==='new')?puid('ozn'):OZN_OPEN;
+  var old=DATA.oznameni[id];
+  if(old){d.ts=old.ts||Date.now();d.datum=old.datum||dnesStr();d.autor=old.autor||whoNow();d.upravenoTs=Date.now();}
+  else{d.ts=Date.now();d.datum=dnesStr();d.autor=whoNow();}
+  DATA.oznameni=DATA.oznameni||{};DATA.oznameni[id]=d;if(db)db.ref('/oznameni/'+id).set(d);
+  OZN_OPEN=id;renderOznameni();var b=$('ozn-save');if(b){b.textContent='✓ Uloženo';setTimeout(function(){var bb=$('ozn-save');if(bb)bb.textContent='💾 Uložit';},1600);}}
+function oznDel(id){if(!id||id==='new')return;if(!confirm('Smazat toto oznámení?'))return;delete DATA.oznameni[id];if(db)db.ref('/oznameni/'+id).remove();OZN_OPEN=null;renderOznameni();}
+function oznPrefillDom(sid){if(!sid)return;var pf=oznPrefill(sid);[['adresat',pf.adresat],['kontaktyVyjadreni',pf.kontaktyVyjadreni],['kontaktPripravar',pf.kontaktPripravar]].forEach(function(p){var el=document.querySelector('#oznameni [data-oznf="'+p[0]+'"]');if(el&&!el.value.trim()&&p[1])el.value=p[1];});}
+function oznExportWord(){
+  var d=oznCollect();
+  function cell(v){return esc(v||'').replace(/\n/g,'<br>');}
+  var rows='<tr><td class="n"></td><td class="s"><b>Stavba</b></td><td class="l"></td><td class="v"><b>'+cell(d.stavbaNazev)+'</b></td></tr>';
+  OZN_SEKCE.forEach(function(s){s.f.forEach(function(x,i){
+    rows+='<tr>'+(i===0?'<td class="n" rowspan="'+s.f.length+'"><b>'+s.n+'</b></td><td class="s" rowspan="'+s.f.length+'"><b>'+esc(s.t)+'</b></td>':'')
+      +'<td class="l">'+esc(x[1])+'</td><td class="v">'+cell(d[x[0]])+'</td></tr>';});});
+  var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Oznámení</title>'
+    +'<style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000}table{border-collapse:collapse;width:100%}td{border:1px solid #000;padding:4pt 7pt;vertical-align:top}td.n{width:26pt;text-align:center;font-weight:bold}td.s{width:120pt}td.l{width:210pt;background:#dcdcdc}h2{font-size:15pt;margin:0 0 8pt}</style></head><body>'
+    +'<h2>Oznámení změny'+(d.stavbaNazev?' — '+esc(d.stavbaNazev):'')+'</h2><table>'+rows+'</table></body></html>';
+  var blob=new Blob(['﻿'+html],{type:'application/msword'});
+  var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+  a.download='Oznameni_'+((d.stavbaNazev||'stavba').replace(/[^\wÀ-ɏ]+/g,'_').slice(0,50))+'_'+dnesStr().replace(/\./g,'-').replace(/-$/,'')+'.doc';
+  document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},500);}
 // ╔══════════════════════ ZÁPIS Z PORAD (centrální, sekce = stavby) ══════════════════════╗
 var PUID=0;function puid(pfx){return pfx+Date.now().toString(36)+(PUID++).toString(36);}
 function dnesStr(){var d=new Date();function p(n){return (n<10?'0':'')+n;}return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+d.getFullYear();}
@@ -1656,13 +1762,21 @@ function exportData(){
   setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
 }
 $('exp-data').addEventListener('click',exportData);
+$('oznameni').addEventListener('click',function(e){
+  if(e.target.closest('#ozn-new')){OZN_OPEN='new';renderOznameni();return;}
+  if(e.target.closest('#ozn-back')){OZN_OPEN=null;renderOznameni();return;}
+  if(e.target.closest('#ozn-save')){oznSave();return;}
+  if(e.target.closest('#ozn-word')){oznExportWord();return;}
+  if(e.target.closest('#ozn-del')){oznDel(OZN_OPEN);return;}
+  var c=e.target.closest('[data-oznopen]');if(c){OZN_OPEN=c.getAttribute('data-oznopen');renderOznameni();return;}});
+$('oznameni').addEventListener('change',function(e){if(e.target.id==='ozn-stavba')oznPrefillDom(e.target.value);});
 // světlý / tmavý režim
 function themeIcon(){var b=$('theme-toggle');if(b)b.textContent=(document.documentElement.getAttribute('data-theme')==='dark')?'☀️ Světlý':'🌙 Tmavý';}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);themeIcon();try{localStorage.setItem('zbv_theme',t);}catch(_){}}
 themeIcon();  // start: jen srovnej ikonu (téma je z inline skriptu v <head> = systém, dokud uživatel nepřepne)
 $('theme-toggle').addEventListener('click',function(){setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');});
 $('view').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;setView(b.getAttribute('data-v'));[].forEach.call(this.querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});});
-function setView(v){VIEW=v;document.querySelector('.cols').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('prehled').classList.toggle('hidden',v!=='prehled');$('porady').classList.toggle('hidden',v!=='porady');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('legenda').classList.toggle('hidden',v==='schranka'||v==='porady');if(v==='schranka')renderInbox();else if(v==='prehled')renderPrehled();else if(v==='porady')renderPorady();else renderTabulka();}
+function setView(v){VIEW=v;document.querySelector('.cols').classList.toggle('hidden',v!=='tabulka');$('inbox').classList.toggle('hidden',v!=='schranka');$('prehled').classList.toggle('hidden',v!=='prehled');$('oznameni').classList.toggle('hidden',v!=='oznameni');$('porady').classList.toggle('hidden',v!=='porady');$('tb-tabulka').classList.toggle('hidden',v!=='tabulka');$('legenda').classList.toggle('hidden',v==='schranka'||v==='porady'||v==='oznameni');if(v==='schranka')renderInbox();else if(v==='prehled')renderPrehled();else if(v==='oznameni')renderOznameni();else if(v==='porady')renderPorady();else renderTabulka();}
 $('prehled').addEventListener('click',function(e){
   var mm=e.target.closest('[data-schmonth]');if(mm){var k=mm.getAttribute('data-schmonth');SCHV_OPEN[k]=!SCHV_OPEN[k];renderPrehled();return;}
   var b=e.target.closest('[data-side]');if(!b)return;FILTER.stavba=b.getAttribute('data-side');FILTER.q='';$('search').value='';setView('tabulka');[].forEach.call($('view').querySelectorAll('button'),function(x){x.classList.toggle('on',x.getAttribute('data-v')==='tabulka');});});
@@ -1809,13 +1923,14 @@ function showApp(){$('gate').classList.add('hidden');$('topbar').classList.remov
 function normalize(raw){
   return {meta:(raw&&raw.meta)||{},stavby:(raw&&raw.stavby)||{},zbv:(raw&&raw.zbv)||{},
     inbox:(raw&&raw.inbox)||{},poznamky:(raw&&raw.poznamky)||{},dulezite:(raw&&raw.dulezite)||{},
-    porady:(raw&&raw.porady)||{},zapis:(raw&&raw.zapis)||{sekce:{}}};
+    porady:(raw&&raw.porady)||{},zapis:(raw&&raw.zapis)||{sekce:{}},oznameni:(raw&&raw.oznameni)||{}};
 }
 function startApp(){if(started)return;started=true;showApp();
   try{db.ref('/').on('value',function(snap){DATA=normalize(snap.val()||{});
     var ae=document.activeElement,editing=ae&&ae.closest&&(ae.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName));
     if(VIEW==='schranka')renderInbox();
     else if(VIEW==='prehled')renderPrehled();
+    else if(VIEW==='oznameni'){if(!(editing&&ae.closest('#oznameni')))renderOznameni();}
     else if(VIEW==='porady'){if(!(editing&&ae.closest('#porady')))renderPorady();}
     else {if(!(editing&&ae.closest('#list')))renderTabulka();}   // need-když píšu do zápisu v Tabulce, nepřekresluj (jinak scroll skáče)
     updateInboxBadge();},function(){});}catch(e){}
