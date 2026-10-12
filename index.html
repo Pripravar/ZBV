@@ -1613,7 +1613,10 @@ function applyNavrh(nv){
   if(nv.oznameniCislo){var cur=String(z.oznameniCislo||'').trim();
     var parts=cur.split(/[,;]\s*|\s+/).filter(Boolean);
     if(parts.indexOf(String(nv.oznameniCislo))===-1)z.oznameniCislo=cur?(cur+', '+nv.oznameniCislo):String(nv.oznameniCislo);}
-  if(nv.krok&&nv.hodnota)setVal(z,nv.krok,nv.hodnota);
+  // krok = záznam komunikace → PŘIDÁVEJ (nový řádek), nepřepisuj, ať je vidět celá historie (neduplikuj)
+  if(nv.krok&&nv.hodnota){var _cur=String(getVal(z,nv.krok)||'').trim(),_nw=String(nv.hodnota).trim();
+    if(!_cur)setVal(z,nv.krok,_nw);
+    else if(_cur.indexOf(_nw)===-1)setVal(z,nv.krok,_cur+'\n'+_nw);}
   // částky
   ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
   if(db)db.ref('/zbv/'+sid+'/'+zid).set(z);
