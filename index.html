@@ -1635,6 +1635,7 @@ function renderInbox(){
         +'<div><span class="k">ZBV:</span> <b>'+esc(zLabel)+'</b></div>'
         +'<div><span class="k">Krok:</span> <b>'+esc(krokL)+'</b></div>'
         +'<div><span class="k">Hodnota:</span> <b>'+esc(nv.hodnota||'')+'</b></div>'
+        +(nv.cekaNa!=null?'<div><span class="k">⏳ Čeká na:</span> '+(String(nv.cekaNa).trim()?'<span class="zwaiton">'+esc(nv.cekaNa)+'</span>':'<i style="color:var(--muted)">(vyčistit — už se nečeká)</i>')+'</div>':'')
         +(nv.popis?'<div><span class="k">Popis:</span> '+esc(nv.popis)+'</div>':'')
         +((nv.kontakty&&nv.kontakty.length)?'<div><span class="k">Kontakty:</span> '+nv.kontakty.map(function(k){return '<b>'+esc((k.role==='TDS'||k.role==='TDI')?'TDS':k.role)+'</b> '+esc(k.jmeno||'')+(k.mail?' &lt;'+esc(k.mail)+'&gt;':'');}).join(' · ')+' <span style="color:var(--muted)">(doplní se do detailu stavby, jen prázdná pole)</span></div>':'')
         +(i.surovyVytah?'<div style="color:var(--muted);font-size:11.5px;margin-top:6px">'+esc(i.surovyVytah)+'</div>':'')
@@ -1854,6 +1855,7 @@ function openEditNavrh(id){
     +'<label>'+esc(COL_BY_ID.nazev?'název':'název')+'</label><input id="m-nazev" value="'+esc(nv.nazev||'')+'">'
     +'<label>krok (sloupec)</label><select id="n-krok">'+krokOpts+'</select>'
     +'<label>hodnota kroku (datum Odesílatel > Příjemce)</label><textarea id="n-hodnota">'+esc(nv.hodnota||'')+'</textarea>'
+    +'<label>⏳ čeká na (na čem/kom ZBV visí — neposouvá milník)</label><textarea id="n-cekaNa">'+esc(nv.cekaNa||'')+'</textarea>'
     +'<div class="mgrid3"><div>'+field('zmenyZaporne',nv.zmenyZaporne||'')+'</div><div>'+field('zmenyKladne',nv.zmenyKladne||'')+'</div><div>'+field('hodnotaZBV',nv.hodnotaZBV||'')+'</div></div>'
     +'<div class="mbtns"><button class="btn" id="m-cancel">Zrušit</button><button class="btn save" id="n-save">✓ Potvrdit do tabulky</button></div></div>';
   $('modal').innerHTML=h;$('modal').classList.remove('hidden');
@@ -1863,10 +1865,11 @@ function openEditNavrh(id){
   $('n-save').onclick=function(){
     var sidSel=$('n-stavba').value;
     if(sidSel==='__new__'){var nm=($('n-newstavba').value||'').trim();if(!nm){alert('Dopiš oficiální název nové stavby.');$('n-newstavba').focus();return;}sidSel=createStavbaFromName(nm);}
-    var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:gv('n-hodnota'),
+    var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:($('n-hodnota').value||'').trim(),  // pozor: gv() přidává prefix „m-", tohle pole ho nemá
       zbvCislo:gv('zbvCislo'),oznameniCislo:gv('oznameniCislo'),SO:gv('SO'),nazev:gv('nazev'),
       zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV'),
       popis:nv.popis,kontakty:nv.kontakty||null};
+    var _ck=($('n-cekaNa').value||'').trim();if(_ck||nv.cekaNa!=null)nv2.cekaNa=_ck;   // prázdné jen když návrh „čeká na" nesl → vyčistí
     if(!nv2.stavbaId){alert('Vyber stavbu.');return;}
     var res=applyNavrh(nv2);if(!res)return;
     DATA.inbox[id].stav='aplikovano';if(db)db.ref('/inbox/'+id+'/stav').set('aplikovano');
