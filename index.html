@@ -176,7 +176,8 @@
   .tl-item{position:relative;padding:3px 0 7px 8px}
   .tl-item:before{content:'';position:absolute;left:-7px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--accent)}
   .tl-item.last:before{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
-  .tl-item.urg:before{background:#f59e0b} .tl-item.urg .tl-lab b{color:#b45309}
+  .tl-item.wait:before{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.35)} .tl-item.wait .tl-lab b{color:#b45309}
+  .tl-item.urgdone:before{background:var(--line)} .tl-item.urgdone .tl-val{color:var(--muted)} .tl-item.urgdone .tl-lab b{color:var(--muted)}
   .tl-lab{font-size:10.5px;color:var(--muted)} .tl-val{font-size:13px;white-space:pre-line}
   .tl-empty{font-size:12px;color:var(--muted);padding:4px 0}
   .zdrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;font-size:12.5px;margin:8px 0}
@@ -668,6 +669,7 @@ function milnik(z){var dots=[],reached=-1,state='',date='';
     next:(reached>=0&&reached<MILNIKY2.length-1)?MILNIKY2[reached+1].n:''};}
 // „na kom/čem ZBV teď visí" — odvozeno z chybějících dílčích kroků (když to rutina nenastaví ručně do z.cekaNa)
 var AKTER={podpisZhotovitel:'Zhotovitel',podpisCM:'CM',podpisTDI:'TDI',podpisAD:'AD',podpisObjednatele:'objednatel',schvalenoCM:'CM',stanoviskoTDI:'TDI',stanoviskoAD:'AD'};
+function hotovoZ(z){var ms=milnik(z);return ms.idx===ms.total-1&&ms.state==='full';}
 // kroky, kdy jsme něco POSLALI a čekáme na reakci příjemce
 var SENT_IDS=['navrhOzn','konceptZBV','distribuceKonceptuZBV','vyporadaniPripominek','distribucePosledniVerze','navrhCistopisu'];
 function cekaNaAuto(z,ms){
@@ -960,8 +962,15 @@ function zbvDetail(sid,zid,z){
   var sd=stadium(z);
   h+='<div class="tl-phase">Historie / kde to kdy bylo</div>';
   // osa: KAŽDÝ záznam (řádek) zvlášť, SEŘAZENÉ CHRONOLOGICKY — nejnovější dole a zvýrazněný
+  // ORANŽOVĚ = na co se čeká TEĎ (poslední krok, kdy jsme něco poslali/urgovali → míček je u druhé strany).
+  // Urgence, na kterou už navázal další krok, je VYŘÍZENÁ (odpověď přišla — do schránky ale chodí hlavně naše maily, tak ji nevidíme).
   var tlItems=krokEvents(z),lastI=-1;tlItems.forEach(function(it,k){if(it.ts!=null)lastI=k;});
-  var tl=tlItems.map(function(it,k){return '<div class="tl-item'+(k===lastI?' last':'')+(it.urg?' urg':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[it.c.g]+' · '+it.c.l)+(it.urg?' · <b>urgence / čekání</b>':'')+(k===lastI?' · <b>poslední</b>':'')+'</div><div class="tl-val">'+esc(it.v)+'</div></div>';}).join('');
+  var lastIt=tlItems[lastI],lastWait=!!(lastIt&&!hotovoZ(z)&&(lastIt.urg||SENT_IDS.indexOf(lastIt.c.id)!==-1));
+  var tl=tlItems.map(function(it,k){
+    var isLast=(k===lastI),wait=isLast&&lastWait,urgDone=it.urg&&!isLast&&k<lastI;
+    var nxt=urgDone?tlItems.slice(k+1).filter(function(x){return x.ts!=null;})[0]:null;
+    var tag=wait?' · <b>poslední — čeká se na reakci</b>':(isLast?' · <b>poslední</b>':(urgDone?' · <b>urgence — vyřízeno</b> (dál se pokračovalo '+esc(firstDate(nxt?nxt.v:''))+'; odpověď přišla mimo schránku)':''));
+    return '<div class="tl-item'+(isLast?' last':'')+(wait?' wait':'')+(urgDone?' urgdone':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[it.c.g]+' · '+it.c.l)+tag+'</div><div class="tl-val">'+esc(it.v)+'</div></div>';}).join('');
   h+=tl?'<div class="tl">'+tl+'</div>':'<div class="tl-empty">Zatím žádné kroky — doplní se z mailů, nebo dopiš přes „upravit".</div>';
   h+='<div class="zacts"><button class="btn" data-ed="'+sid+'|'+zid+'">✏️ upravit / doplnit</button>'
     +'<button class="btn" data-del="'+sid+'|'+zid+'" style="color:var(--neg)">✕ smazat</button></div>';
