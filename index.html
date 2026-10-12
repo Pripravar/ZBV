@@ -611,21 +611,24 @@ function stavbaNm(s){return (s&&s.nazev)?s.nazev:'';}
 
 // odvozený stav (když není ručně nastaven)
 var VAZNE_DNI=14;  // ZBV bez pohybu déle než tolik dní = „bez progresu" (vázne)
-// nejnovější datum napříč všemi kroky → kolik dní se nepohnulo (null = žádné datum)
+// nejnovější datum napříč VŠEMI ŘÁDKY všech kroků → kolik dní se nepohnulo (null = žádné datum)
+// (každý řádek = jedna komunikace; urgence/čekání se jako pohyb NEpočítá — nic se nestalo)
 function lastKrokDays(z){
   var newest=null;
-  KROK_IDS.forEach(function(id){var v=getVal(z,id);if(!v)return;var ds=firstDate(v);if(!ds)return;
-    var m=ds.match(/(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{2,4})/);if(!m)return;var y=+m[3];if(y<100)y+=2000;
-    var t=new Date(y,(+m[2])-1,+m[1]).getTime();if(newest==null||t>newest)newest=t;});
+  KROK_IDS.forEach(function(id){var v=getVal(z,id);if(!v)return;
+    String(v).split('\n').forEach(function(l){if(!l.trim()||URG_RE.test(l))return;var t=dateTs(firstDate(l));
+      if(t!=null&&(newest==null||t>newest))newest=t;});});
   if(newest==null)return null;
-  return Math.floor((Date.now()-newest)/86400000);
+  return Math.max(0,Math.floor((Date.now()-newest)/86400000));
 }
 function effStav(z){
   if(z.zruseno)return 'zruseno';
   if(z.stav)return z.stav==='fakturovano'?'hotovo':z.stav; // starý stav „fakturováno" = teď „hotovo"
   // Fakturaci už NEsledujeme — podepsaná ZBV = „Hotovo (lze fakturovat)". Staré fakt kroky počítej jako hotovo.
-  if(getVal(z,'podpisObjednatele')||getVal(z,'finalCistopis')||getVal(z,'pokynCistopis')
-     ||getVal(z,'vyfakturovano')||getVal(z,'fakturace')||getVal(z,'iposEdok')||getVal(z,'zadanoIPOS'))return 'hotovo'; // podepsáno / lze fakturovat
+  // hotovo = KOMPLETNĚ podepsáno (= milník „Lze fakturovat ✓"); finální čistopis teprve jde k podpisům → ne.
+  // pokynCistopis = starý sloupec z Excelu „pokyn k vydání čistopisu" = objednatel schválil → hotovo.
+  if(['podpisObjednatele','cistopisOdIN','pokynCistopis','vyfakturovano','fakturace','iposEdok','zadanoIPOS']
+     .some(function(id){return doneVal(z,id);}))return 'hotovo'; // urgence se nepočítá
   var dny=lastKrokDays(z);
   if(dny!=null&&dny>VAZNE_DNI)return 'bezprogresu';   // vázne — 14+ dní bez pohybu (i v rozdělané fázi)
   var procesData=KROK_IDS.some(function(id){return COL_BY_ID[id].g!=='ozn'&&getVal(z,id);});
@@ -641,7 +644,7 @@ var MILNIKY2=[
   {n:'Koncept',    full:['konceptZBV','distribuceKonceptuZBV'], half:[]},
   {n:'Připomínky', full:['vyporadaniPripominek','distribucePosledniVerze'], half:['pripominkyZBV','pripominkyRSD','odeslanoKPripominkam','naADTDS','pripominkyADTDS','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
   {n:'Stanoviska', full:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS'], half:[]},
-  {n:'Podpisy',    full:['podpisObjednatele','cistopisOdIN','vyfakturovano','fakturace','iposEdok','zadanoIPOS'], half:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','pokynCistopis','vracenoRSD','originaly']}
+  {n:'Podpisy',    full:['podpisObjednatele','cistopisOdIN','pokynCistopis','vyfakturovano','fakturace','iposEdok','zadanoIPOS'], half:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','vracenoRSD','originaly']}
 ];
 // řádek kroku, který je jen URGENCE / čekání (krok se ještě NESTAL) — nepočítá se jako hotový
 var URG_RE=/URGENCE|čeká se na|čeká na podklad|připomínáme se/i;
@@ -1569,7 +1572,7 @@ function bilanceHtml(){
     if(SCHV_USEK&&(o.s.usek||'')!==SCHV_USEK)return;
     zbvOrdered(o.sid).forEach(function(r){
       if(r.z.zruseno)return;
-      var val=getVal(r.z,SCHV_MILNIK);if(!val)return;
+      var val=doneVal(r.z,SCHV_MILNIK);if(!val)return;   // urgence („čekáme na podpis") NENÍ schválení
       var d=parseCzDate(val);if(!d)return;
       yearsSet[d.y]=true;
       if(SCHV_YEAR&&String(d.y)!==SCHV_YEAR)return;
