@@ -98,6 +98,10 @@
   .smetric .v.v-pos{color:var(--pos)} .smetric .v.v-neg{color:var(--neg)}
   .smetric .lim-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.35}
   .lim-prep{color:var(--vproces)}
+  .lim-bar{display:flex;height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:5px}
+  .lim-bar i{display:block;height:100%}
+  .lb-cist{background:#1d4ed8} .lb-konc{background:#60a5fa} .lb-ozn{background:repeating-linear-gradient(45deg,#bfdbfe 0 3px,#dbeafe 3px 6px)}
+  .lg-cist{color:#1d4ed8} .lg-konc{color:#60a5fa} .lg-ozn{color:#93c5fd}
   .lim-warn{margin-top:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:8px 10px;font-size:12px;color:#9a3412;line-height:1.4}
   :root[data-theme="dark"] .lim-warn{background:#2a2214;border-color:#7c5312;color:#fbbf24}
   /* ── ZBV zrušeno ── */
@@ -819,20 +823,31 @@ function statCounts(sid){
 // Do limitu se počítají VŠECHNY ZBV ve skupině (i koncepty/evidované), ať je vidět, kolik zbývá
 // na další zatím neoznámené změny. Zvlášť se ukazuje část „v přípravě" (zatím neschválené) a
 // ZBV, které ještě nemají zařazenou skupinu (nepočítají se — je potřeba je ručně zařadit).
+// SMLUVNÍ (původní) CENA DÍLA = základ limitů §222. Přednostně z PŘÍLOHY 10 jednotlivých ZBV (pole smluvniCastka) —
+// u všech ZBV stavby má být stejná, takže beru NEJČASTĚJŠÍ hodnotu. Ručně zadaná cena u stavby = jen záloha.
+function smluvniCena(s,sid){
+  var cnt={},last=null;
+  zbvOrdered(sid).forEach(function(o){if(o.z.zruseno)return;var v=toNum(getVal(o.z,'smluvniCastka'));if(v!=null&&v>0){cnt[v]=(cnt[v]||0)+1;last=v;}});
+  var best=null,bn=0;Object.keys(cnt).forEach(function(k){if(cnt[k]>bn||(cnt[k]===bn&&+k===last)){bn=cnt[k];best=+k;}});
+  var rucne=toNum(s.cenaDila);
+  if(best!=null)return {cena:best,zdroj:'zbv',n:bn,varianty:Object.keys(cnt).length,rucne:(rucne!=null&&Math.abs(rucne-best)>1)?rucne:null};
+  return {cena:rucne,zdroj:rucne!=null?'rucne':null};
+}
+// do které „vrstvy" čerpání ZBV patří (podle milníku): čistopis = daný; koncept = v řešení; oznámení = předpoklad (odhad)
+function limTier(z){var ms=milnik(z);return ms.idx>=5?'cist':(ms.idx>=2?'konc':'ozn');}
 function limity(s,sid){
-  var cena=toNum(s.cenaDila),cer34=0,cer5=0,prep34=0,prep5=0,bezSk={n:0,sum:0};
+  var SC=smluvniCena(s,sid),cena=SC.cena,bezSk={n:0,sum:0};
+  var g34={cist:0,konc:0,ozn:0},g5={cist:0,konc:0,ozn:0};
   zbvOrdered(sid).forEach(function(o){
     if(o.z.zruseno)return;   // zrušené ZBV se do limitu nepočítají
     var sk=String(getVal(o.z,'skupina')||'').trim();
-    var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);
-    var st=effStav(o.z), isPrep=(st!=='hotovo');   // v přípravě = zatím nepodepsané
-    var has34=/3|4/.test(sk), has5=/5/.test(sk);
-    if(has34){cer34+=abs; if(isPrep)prep34+=abs;}
-    if(has5){cer5+=abs; if(isPrep)prep5+=abs;}
-    if(!sk&&abs>0){bezSk.n++; bezSk.sum+=abs;}   // má hodnotu, ale žádnou skupinu → nezapočítané
+    var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);if(!abs)return;
+    var t=limTier(o.z);
+    if(/3|4/.test(sk))g34[t]+=abs;
+    if(/5/.test(sk))g5[t]+=abs;
+    if(!sk){bezSk.n++; bezSk.sum+=abs;}   // má hodnotu, ale žádnou skupinu → nezapočítané
   });
-  return {cena:cena,l34:cena!=null?cena*0.30:null,l5:cena!=null?cena*0.15:null,
-    cer34:cer34,cer5:cer5,prep34:prep34,prep5:prep5,bezSk:bezSk};
+  return {cena:cena,sc:SC,l34:cena!=null?cena*0.30:null,l5:cena!=null?cena*0.15:null,g34:g34,g5:g5,bezSk:bezSk};
 }
 // stadium = poslední vyplněný krok (v pořadí životního cyklu) = kde to teď je
 function stadium(z){
@@ -863,17 +878,26 @@ function renderTabulka(){
   var lideHtml=ROLES.map(function(p){return p[1]+': <b>'+esc((s.lide&&s.lide[p[0]])||'—')+'</b>';}).join(' · ');
   var L=limity(s,sid),sc=statCounts(sid),sm=statMoney(sid);
   var metr='<div class="smetrics">';
-  metr+='<div class="smetric"><div class="l">Cena díla (vysoutěženo)</div><div class="v">'+(L.cena!=null?fmtNum(L.cena)+' Kč':'— zadej')+'</div></div>';
-  function limCard(lab,lim,cer,prep){
-    var zb=lim-cer;
-    var sub='z '+fmtNum(lim)+' · čerpáno '+fmtNum(cer)+(prep>0?' <span class="lim-prep">(v přípravě '+fmtNum(prep)+')</span>':'');
+  var zdrojTxt=L.sc.zdroj==='zbv'?'z přílohy 10 ('+L.sc.n+' ZBV)':(L.sc.zdroj==='rucne'?'zadáno ručně u stavby':'doplní se z přílohy 10 ZBV');
+  metr+='<div class="smetric"><div class="l">Smluvní cena díla</div><div class="v">'+(L.cena!=null?fmtNum(L.cena)+' Kč':'— chybí')+'</div><div class="lim-sub">'+esc(zdrojTxt)+'</div></div>';
+  // zbývá = limit − (čistopisy [daný] + koncepty [v řešení] + oznámení [předpoklad])
+  function limCard(lab,lim,g){
+    var tot=g.cist+g.konc+g.ozn,zb=lim-tot;
+    var pc=function(v){return Math.max(0,Math.min(100,lim>0?v/lim*100:0)).toFixed(1)+'%';};
+    var bar='<div class="lim-bar" title="čistopisy '+fmtNum(g.cist)+' · koncepty '+fmtNum(g.konc)+' · oznámení '+fmtNum(g.ozn)+' z limitu '+fmtNum(lim)+'">'
+      +'<i class="lb-cist" style="width:'+pc(g.cist)+'"></i><i class="lb-konc" style="width:'+pc(g.konc)+'"></i><i class="lb-ozn" style="width:'+pc(g.ozn)+'"></i></div>';
+    var sub='z '+fmtNum(lim)+'<br><span class="lg-cist">■</span> čistopisy '+fmtNum(g.cist)
+      +' · <span class="lg-konc">■</span> koncepty '+fmtNum(g.konc)
+      +' · <span class="lg-ozn">■</span> oznámení (odhad) '+fmtNum(g.ozn);
     return '<div class="smetric"><div class="l">'+lab+' · zbývá</div>'
-      +'<div class="v '+(zb>=0?'v-pos':'v-neg')+'">'+fmtNum(zb)+' Kč</div>'
+      +'<div class="v '+(zb>=0?'v-pos':'v-neg')+'">'+fmtNum(zb)+' Kč</div>'+bar
       +'<div class="lim-sub">'+sub+'</div></div>';
   }
-  if(L.l34!=null)metr+=limCard('Limit sk. 3+4 · 30 %',L.l34,L.cer34,L.prep34);
-  if(L.l5!=null)metr+=limCard('Limit sk. 5 · 15 %',L.l5,L.cer5,L.prep5);
+  if(L.l34!=null)metr+=limCard('Limit sk. 3+4 · 30 %',L.l34,L.g34);
+  if(L.l5!=null)metr+=limCard('Limit sk. 5 · 15 %',L.l5,L.g5);
   metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
+  if(L.sc.rucne!=null)metr+='<div class="lim-warn">⚠️ Ručně zadaná cena díla u stavby (<b>'+fmtNum(L.sc.rucne)+' Kč</b>) nesedí se smluvní cenou z přílohy 10 (<b>'+fmtNum(L.cena)+' Kč</b>) — limity počítám z <b>přílohy 10</b>. Zkontroluj a případně oprav v „upravit stavbu".</div>';
+  if(L.sc.varianty>1)metr+='<div class="lim-warn">⚠️ ZBV této stavby uvádějí v příloze 10 <b>'+L.sc.varianty+' různé smluvní ceny</b> — beru nejčastější ('+fmtNum(L.cena)+' Kč). Zkontroluj pole „smluvní částka" u ZBV.</div>';
   if(L.cena!=null&&L.bezSk.n>0)metr+='<div class="lim-warn">⚠️ <b>'+L.bezSk.n+' ZBV má hodnotu, ale nezařazenou skupinu</b> ('+fmtNum(L.bezSk.sum)+' Kč) — nepočítá se do limitu. Zařaď je přes „upravit ZBV" → pole <b>skupina</b>, ať vidíš skutečně zbývající limit na další změny.</div>';
   // součty po stavech v této stavbě (počet · peníze)
   var STS=[['evidovano','Evidováno'],['vproces','V přípravě'],['bezprogresu','Na připomínkách u objednatele'],['hotovo','Hotovo (lze fakturovat)']];
@@ -1636,6 +1660,9 @@ function autoEligible(nv,jistota){
   if(!nv.zbvId||nv.zbvId==='new')return false;
   if(!(DATA.zbv[nv.stavbaId]&&DATA.zbv[nv.stavbaId][nv.zbvId]))return false;
   if(nv.zmenyZaporne||nv.zmenyKladne||nv.hodnotaZBV||nv.skupina)return false;
+  // smluvní cena z přílohy 10: automaticky jen když SEDÍ s tou, co už stavba má; jiná/nová → ruční potvrzení
+  if(nv.smluvniCastka!=null&&nv.smluvniCastka!==''){var _sc=smluvniCena(DATA.stavby[nv.stavbaId],nv.stavbaId).cena,_nv=toNum(nv.smluvniCastka);
+    if(_sc==null||_nv==null||Math.abs(_sc-_nv)>1)return false;}
   if(!(nv.krok&&nv.hodnota))return false;
   return true;}
 function autoApplyInbox(){
@@ -1673,6 +1700,12 @@ function renderInbox(){
         +'<div><span class="k">ZBV:</span> <b>'+esc(zLabel)+'</b></div>'
         +'<div><span class="k">Krok:</span> <b>'+esc(krokL)+'</b></div>'
         +'<div><span class="k">Hodnota:</span> <b>'+esc(nv.hodnota||'')+'</b></div>'
+        +((nv.hodnotaZBV||nv.zmenyKladne||nv.zmenyZaporne||nv.skupina||nv.smluvniCastka)?'<div><span class="k">Peníze:</span> '+[
+            nv.hodnotaZBV?'hodnota ZBV <b>'+esc(fmtNum(toNum(nv.hodnotaZBV)))+'</b>':'',
+            nv.zmenyKladne?'kladné '+esc(fmtNum(toNum(nv.zmenyKladne))):'',
+            nv.zmenyZaporne?'záporné '+esc(fmtNum(toNum(nv.zmenyZaporne))):'',
+            nv.skupina?'sk. <b>'+esc(nv.skupina)+'</b>':'',
+            nv.smluvniCastka?'smluvní cena (příl. 10) <b>'+esc(fmtNum(toNum(nv.smluvniCastka)))+'</b>':''].filter(Boolean).join(' · ')+'</div>':'')
         +(nv.cekaNa!=null?'<div><span class="k">⏳ Čeká na:</span> '+(String(nv.cekaNa).trim()?'<span class="zwaiton">'+esc(nv.cekaNa)+'</span>':'<i style="color:var(--muted)">(vyčistit — už se nečeká)</i>')+'</div>':'')
         +(nv.popis?'<div><span class="k">Popis:</span> '+esc(nv.popis)+'</div>':'')
         +((nv.kontakty&&nv.kontakty.length)?'<div><span class="k">Kontakty:</span> '+nv.kontakty.map(function(k){return '<b>'+esc((k.role==='TDS'||k.role==='TDI')?'TDS':k.role)+'</b> '+esc(k.jmeno||'')+(k.mail?' &lt;'+esc(k.mail)+'&gt;':'');}).join(' · ')+' <span style="color:var(--muted)">(doplní se do detailu stavby, jen prázdná pole)</span></div>':'')
@@ -1723,7 +1756,7 @@ function applyNavrh(nv){
     if(_ck===''){delete z.cekaNa;}
     else{var _cc=String(z.cekaNa||'').trim();z.cekaNa=(!_cc)?_ck:(_cc.indexOf(_ck)===-1?_cc+'\n'+_ck:_cc);}}
   // částky
-  ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
+  ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina','smluvniCastka'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
   if(db)db.ref('/zbv/'+sid+'/'+zid).set(z);
   // kontakty AD / TDS z mailu → doplň do detailu stavby (jen prázdná pole, nepřepisuj; TDS = role TDI)
   if(nv.kontakty&&nv.kontakty.length){var st=DATA.stavby[sid];if(st){st.lide=st.lide||{};st.lideMail=st.lideMail||{};var ch=false;
@@ -1906,7 +1939,7 @@ function openEditNavrh(id){
     var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:($('n-hodnota').value||'').trim(),  // pozor: gv() přidává prefix „m-", tohle pole ho nemá
       zbvCislo:gv('zbvCislo'),oznameniCislo:gv('oznameniCislo'),SO:gv('SO'),nazev:gv('nazev'),
       zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV'),
-      popis:nv.popis,kontakty:nv.kontakty||null};
+      popis:nv.popis,kontakty:nv.kontakty||null,skupina:nv.skupina,smluvniCastka:nv.smluvniCastka};
     var _ck=($('n-cekaNa').value||'').trim();if(_ck||nv.cekaNa!=null)nv2.cekaNa=_ck;   // prázdné jen když návrh „čeká na" nesl → vyčistí
     if(!nv2.stavbaId){alert('Vyber stavbu.');return;}
     var res=applyNavrh(nv2);if(!res)return;
