@@ -155,6 +155,9 @@
   #f-dul.on{background:#fef3c7;border-color:#f59e0b;color:#92400e;font-weight:700}
   .zstad{display:flex;align-items:center;gap:9px;padding:0 12px 10px;flex-wrap:wrap}
   .stadchip{font-size:12px;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font-weight:600}
+  .msdots{display:inline-flex;gap:3px;align-items:center;margin-right:7px;vertical-align:middle}
+  .msdots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block}
+  .msdots i.on{background:var(--accent)}
   .st-vproces .stadchip{background:#fef3c7;color:#92400e} .st-hotovo .stadchip{background:#dcfce7;color:#166534}
   .st-fakturovano .stadchip{background:#dbeafe;color:#1e40af} .st-bezprogresu .stadchip{background:#fee2e2;color:#991b1b} .st-evidovano .stadchip{background:#eef1f4;color:#475569}
   .vazne-badge{font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:999px}
@@ -624,6 +627,20 @@ function effStav(z){
   return 'evidovano';               // zatím jen zaevidováno / oznámeno, nezačato
 }
 var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Na připomínkách u objednatele',hotovo:'Hotovo',fakturovano:'Fakturováno',zruseno:'Zrušeno'};
+// MILNÍKY (kde ZBV je) — 7 klíčových fází; každá „splněna", když má data některý z jejích kroků
+var MILNIKY2=[
+  {n:'Oznámeno',   ids:['oznameni']},
+  {n:'Pokyn',      ids:['pokyn']},
+  {n:'Koncept',    ids:['konceptZBV','distribuceKonceptuZBV']},
+  {n:'Připomínky', ids:['pripominkyZBV','vyporadaniPripominek','distribucePosledniVerze','pripominkyRSD','odeslanoKPripominkam','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
+  {n:'Stanoviska', ids:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS','naADTDS','pripominkyADTDS']},
+  {n:'Podepsáno',  ids:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','podpisObjednatele','pokynCistopis','cistopisOdIN']},
+  {n:'Fakturace',  ids:['zadanoIPOS','iposEdok','fakturace','vyfakturovano','vracenoRSD','originaly']}
+];
+function milnik(z){var reached=-1,date='';
+  MILNIKY2.forEach(function(m,i){var hit=null;m.ids.forEach(function(id){var v=getVal(z,id);if(v)hit=v;});if(hit){reached=i;var d=firstDate(hit);if(d)date=d;}});
+  return {idx:reached,total:MILNIKY2.length,name:reached>=0?MILNIKY2[reached].n:'—',
+    next:(reached>=0&&reached<MILNIKY2.length-1)?MILNIKY2[reached+1].n:'',date:date};}
 
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{},porady:{},zapis:{sekce:{}}};
@@ -763,6 +780,7 @@ function stadium(z){
   return {done:done,doneLab:done?COL_BY_ID[done].l:'',doneVal:done?String(getVal(z,done)):'',nextLab:next?COL_BY_ID[next].l:''};
 }
 function firstDate(s){var m=String(s).match(/\d{1,2}\.\s?\d{1,2}\.\s?\d{2,4}/);return m?m[0]:'';}
+function dateTs(s){var m=String(s).match(/(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{2,4})/);if(!m)return null;var y=+m[3];if(y<100)y+=2000;return new Date(y,(+m[2])-1,+m[1]).getTime();}
 // číslo ZBV: zobrazení 3místně (001, 017, 121) a číselné řazení
 function zbvBadge(z){var v=String(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'');if(!v)return '—';return /^\d+$/.test(v)?(v.length>=3?v:('000'+v).slice(-3)):v;}
 function zbvSort(z){var v=String(getVal(z,'zbvCislo')||getVal(z,'oznameniCislo')||'');var m=v.match(/\d+/);return m?parseInt(m[0],10):99999;}
@@ -856,8 +874,9 @@ function zbvCard(sid,zid,z){
   var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
   var dny=lastKrokDays(z);
   var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⏳ u objednatele '+dny+' dní</span>':'';
-  var stadHtml=(sd.done
-    ?'<span class="stadchip">'+esc(sd.doneLab)+(firstDate(sd.doneVal)?' · '+firstDate(sd.doneVal):'')+'</span>'+(sd.nextLab?'<span class="zwait">další: '+esc(sd.nextLab)+'</span>':'')
+  var ms=milnik(z);var dots='';for(var _mi=0;_mi<ms.total;_mi++)dots+='<i class="'+(_mi<=ms.idx?'on':'')+'"></i>';
+  var stadHtml=(ms.idx>=0
+    ?'<span class="msdots" title="milník '+(ms.idx+1)+'/'+ms.total+'">'+dots+'</span><span class="stadchip">'+(ms.idx+1)+'/'+ms.total+' · '+esc(ms.name)+(ms.date?' · '+esc(ms.date):'')+'</span>'+(ms.next?'<span class="zwait">další: '+esc(ms.next)+'</span>':'')
     :'<span class="stadchip">zatím bez kroků — jen evidováno</span>')+vazne;
   var h='<div class="zcard st-'+st+(open?' open':'')+(dul?' dul':'')+(z.zruseno?' zruseno':'')+'">'
     +'<div class="zhead" data-toggle="'+sid+'|'+zid+'">'
@@ -883,10 +902,12 @@ function zbvDetail(sid,zid,z){
     +'<textarea class="zpozn" data-pozn="'+sid+'|'+zid+'" placeholder="Poznámka k tomuto ZBV — kontakty, dohody, na co pozor… (uloží se po kliknutí jinam)">'+esc(note)+'</textarea></div>';
   var sd=stadium(z);
   h+='<div class="tl-phase">Historie / kde to kdy bylo</div>';
-  var tl='';
-  GROUPS.forEach(function(G){if(G[0]==='ident'||G[0]==='penize')return;
-    COLS.filter(function(c){return c.g===G[0]&&c.krok;}).forEach(function(c){var v=getVal(z,c.id);if(!v)return;
-      tl+='<div class="tl-item'+(c.id===sd.done?' last':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[G[0]]+' · '+c.l)+'</div><div class="tl-val">'+esc(v)+'</div></div>';});});
+  // osa SEŘAZENÁ CHRONOLOGICKY podle data (kroky bez data na konec, v pořadí procesu)
+  var tlItems=[];
+  COLS.forEach(function(c){if(!c.krok||(c.g!=='ozn'&&c.g!=='proces'&&c.g!=='fakt'))return;var v=getVal(z,c.id);if(!v)return;
+    tlItems.push({c:c,v:v,ts:dateTs(firstDate(v))});});
+  tlItems.sort(function(a,b){if(a.ts==null&&b.ts==null)return 0;if(a.ts==null)return 1;if(b.ts==null)return -1;return a.ts-b.ts;});
+  var tl=tlItems.map(function(it){return '<div class="tl-item'+(it.c.id===sd.done?' last':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[it.c.g]+' · '+it.c.l)+'</div><div class="tl-val">'+esc(it.v)+'</div></div>';}).join('');
   h+=tl?'<div class="tl">'+tl+'</div>':'<div class="tl-empty">Zatím žádné kroky — doplní se z mailů, nebo dopiš přes „upravit".</div>';
   h+='<div class="zacts"><button class="btn" data-ed="'+sid+'|'+zid+'">✏️ upravit / doplnit</button>'
     +'<button class="btn" data-del="'+sid+'|'+zid+'" style="color:var(--neg)">✕ smazat</button></div>';
