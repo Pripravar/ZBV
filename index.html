@@ -516,11 +516,13 @@ var COLS=[
   {id:"nazevSO",     g:"ident", l:"název SO"},
   {id:"pricina",     g:"ident", l:"příčina změny"},
   {id:"rozpocet",    g:"ident", l:"rozpočet (pozn.)"},
-  // group: oznámení
-  {id:"distribuceOzn",g:"ozn",  l:"distribuce konceptu",krok:1},
-  {id:"oznameni",    g:"ozn",   l:"odeslání oznámení",krok:1},
-  {id:"pokyn",       g:"ozn",   l:"pokyn",krok:1},
+  // group: oznámení (FÁZE 1) — v pořadí procesu
+  {id:"navrhOzn",     g:"ozn",  l:"návrh oznámení (MS)",krok:1},
+  {id:"pripominkyOzn",g:"ozn",  l:"připomínky k oznámení (TDS)",krok:1},
+  {id:"oznameni",    g:"ozn",   l:"oznámení odesláno DS (oficiálně)",krok:1},
+  {id:"pokyn",       g:"ozn",   l:"pokyn (IN)",krok:1},
   {id:"poznamky",    g:"ozn",   l:"poznámky"},
+  {id:"distribuceOzn",g:"ozn",  l:"distribuce konceptu oznámení",krok:1},
   {id:"terminPredlozeni",g:"ozn",l:"termín předložení",krok:1},
   // group: peníze
   {id:"skupina",     g:"penize",l:"skupina"},
@@ -534,40 +536,44 @@ var COLS=[
   {id:"sk2z",g:"penize",l:"Sk2 −",num:1},{id:"sk2k",g:"penize",l:"Sk2 +",num:1},
   {id:"sk34z",g:"penize",l:"Sk3+4 −",num:1},{id:"sk34k",g:"penize",l:"Sk3+4 +",num:1},
   {id:"sk5z",g:"penize",l:"Sk5 −",num:1},{id:"sk5k",g:"penize",l:"Sk5 +",num:1},
-  // group: proces ZBV (kroky)
-  {id:"navrhRozpoctu1",g:"proces",l:"návrh rozpočtu (Jůzko)",krok:1},
-  {id:"pripominky1", g:"proces",l:"připomínky k rozpočtu",krok:1},
-  {id:"navrhRozpoctu2",g:"proces",l:"návrh rozpočtu (Kastlová)",krok:1},
-  {id:"pripominky2", g:"proces",l:"připomínky k rozpočtu",krok:1},
+  // group: PROCES ZBV (FÁZE 2) — v pořadí skutečného postupu
+  {id:"konceptZBV",  g:"proces",l:"koncept ZBV zaslán na TDS",krok:1},
+  {id:"distribuceKonceptuZBV",g:"proces",l:"distribuce konceptu ZBV",krok:1},
+  {id:"pripominkyZBV",g:"proces",l:"připomínky k ZBV (TDS / cenař)",krok:1},
+  {id:"vyporadaniPripominek",g:"proces",l:"zapracování připomínek + další kontrola (MS)",krok:1},
+  {id:"distribucePosledniVerze",g:"proces",l:"distribuce poslední verze",krok:1},
+  {id:"schvalenoCM", g:"proces",l:"odsouhlasení / stanovisko CM (supervize)",krok:1},
+  {id:"stanoviskoTDI",g:"proces",l:"stanovisko TDI",krok:1},
+  {id:"stanoviskoAD",g:"proces",l:"stanovisko AD",krok:1},
+  {id:"navrhCistopisu",g:"proces",l:"návrh čistopisu",krok:1},
+  {id:"finalCistopis",g:"proces",l:"čistopis ZBV (finální)",krok:1},
+  {id:"predlozenoPodpis",g:"proces",l:"předloženo k podpisu",krok:1},
+  {id:"podpisZhotovitel",g:"proces",l:"podpis: Zhotovitel (MS)",krok:1},
+  {id:"podpisCM",    g:"proces",l:"podpis: Supervize (CM)",krok:1},
+  {id:"podpisTDI",   g:"proces",l:"podpis: TDI",krok:1},
+  {id:"podpisAD",    g:"proces",l:"podpis: AD",krok:1},
+  {id:"podpisObjednatele",g:"proces",l:"podpis: IN (objednatel)",krok:1},
+  {id:"cistopisOdIN",g:"proces",l:"čistopis zaslán od IN pro MS",krok:1},
+  // ── méně časté / starší kroky (v ose se ukážou jen když mají data) ──
+  {id:"navrhRozpoctu1",g:"proces",l:"návrh rozpočtu (1. kolo)",krok:1},
+  {id:"pripominky1", g:"proces",l:"připomínky k rozpočtu (1. kolo)",krok:1},
+  {id:"navrhRozpoctu2",g:"proces",l:"návrh rozpočtu (2. kolo)",krok:1},
+  {id:"pripominky2", g:"proces",l:"připomínky k rozpočtu (2. kolo)",krok:1},
   {id:"odeslanoKPripominkam",g:"proces",l:"odesláno k připomínkám",krok:1},
   {id:"pripominkyRSD",g:"proces",l:"připomínky ŘSD/TDS/CM",krok:1},
   {id:"naADTDS",     g:"proces",l:"posláno na AD/TDS",krok:1},
   {id:"pripominkyADTDS",g:"proces",l:"připomínky AD/TDS",krok:1},
-  {id:"stanoviskoAD",g:"proces",l:"stanovisko AD",krok:1},
   {id:"stanoviskoTDS",g:"proces",l:"stanovisko TDS",krok:1},
-  {id:"konceptZBV",  g:"proces",l:"koncept ZBV",krok:1},
-  {id:"distribuceKonceptuZBV",g:"proces",l:"distribuce konceptu ZBV",krok:1},
-  {id:"pripominkyZBV",g:"proces",l:"připomínky k ZBV",krok:1},
-  {id:"vyporadaniPripominek",g:"proces",l:"vypořádání připomínek",krok:1},
-  {id:"distribucePosledniVerze",g:"proces",l:"distribuce poslední verze",krok:1},
-  {id:"navrhCistopisu",g:"proces",l:"návrh čistopisu",krok:1},
-  {id:"finalCistopis",g:"proces",l:"finální čistopis",krok:1},
   {id:"pokynCistopis",g:"proces",l:"pokyn k vydání čistopisu",krok:1},
-  {id:"predlozenoPodpis",g:"proces",l:"předloženo k podpisu",krok:1},
-  {id:"podpisAD",    g:"proces",l:"podpis AD",krok:1},
-  {id:"podpisTDI",   g:"proces",l:"podpis TDI/TDS",krok:1},
-  {id:"schvalenoCM", g:"proces",l:"schváleno CM",krok:1},
-  // podpisy / předložení (patří do PROCESU, ne do fakturace)
   {id:"predlozenoReditelstvi",g:"proces",l:"předloženo na ředitelství",krok:1},
   {id:"predlozenoRSDTDS",g:"proces",l:"předloženo na ŘSD/TDS",krok:1},
-  // group: fakturace
-  {id:"podpisObjednatele",g:"fakt",l:"podpis objednatele",krok:1},
-  {id:"zadanoIPOS",  g:"fakt",l:"zadáno do IPOS",krok:1},
+  // group: FAKTURACE (FÁZE 3)
+  {id:"zadanoIPOS",  g:"fakt",l:"uložení u MS / zadáno do IPOS",krok:1},
   {id:"iposEdok",    g:"fakt",l:"IPOS / EDOK",krok:1},
-  {id:"vracenoRSD",  g:"fakt",l:"vráceno od ŘSD",krok:1},
-  {id:"originaly",   g:"fakt",l:"originály",krok:1},
   {id:"fakturace",   g:"fakt",l:"fakturace",krok:1},
-  {id:"vyfakturovano",g:"fakt",l:"vyfakturováno",krok:1}
+  {id:"vyfakturovano",g:"fakt",l:"vyfakturováno",krok:1},
+  {id:"vracenoRSD",  g:"fakt",l:"vráceno od ŘSD",krok:1},
+  {id:"originaly",   g:"fakt",l:"originály",krok:1}
 ];
 var GROUPS=[["ident","Identifikace","g-ident"],["ozn","Oznámení","g-ozn"],["penize","Peníze","g-penize"],["proces","Proces ZBV","g-proces"],["fakt","Fakturace","g-fakt"]];
 var COL_BY_ID={}; COLS.forEach(function(c){COL_BY_ID[c.id]=c;});
@@ -1697,12 +1703,14 @@ function showZbvModal(z,title,note){
     +['','hotovo','vproces','bezprogresu','fakturovano'].map(function(s){return '<option value="'+s+'"'+(z.stav===s?' selected':'')+'>'+(s?STAV_LBL[s]:'(auto: '+STAV_LBL[effStav(z)]+')')+'</option>';}).join('')+'</select></div></div>';
   h+='<label class="m-zrus"><input type="checkbox" id="m-zruseno"'+(z.zruseno?' checked':'')+'> 🚫 <b>Zrušeno</b> — tato ZBV se ruší (vyřadí se z limitů i počtů, v seznamu zůstane přeškrtnutá). Pro přečíslování jiné ZBV uprav její pole <b>ZBV č.</b>.</label>';
   // kroky — zobraz ty s daty + běžné; ostatní přes rozbalení
-  h+='<h4>Oznámení</h4><div class="mgrid2">'+field('oznameni',getVal(z,'oznameni'))+field('pokyn',getVal(z,'pokyn'))+'</div>';
+  h+='<h4>Oznámení (formát: datum Odesílatel > Příjemce)</h4>';
+  var OZN_DEF=['navrhOzn','pripominkyOzn','oznameni','pokyn'];
+  COLS.filter(function(c){return c.g==='ozn'&&c.krok;}).forEach(function(c){var v=getVal(z,c.id);if(v||OZN_DEF.indexOf(c.id)!==-1)h+=field(c.id,v,'ta');});
   h+='<h4>Proces ZBV (kroky — formát: datum Odesílatel > Příjemce)</h4>';
-  var procSteps=COLS.filter(function(c){return c.g==='proces';});
-  procSteps.forEach(function(c){var v=getVal(z,c.id);if(v||['stanoviskoAD','stanoviskoTDS','navrhCistopisu','finalCistopis','pripominkyZBV'].indexOf(c.id)!==-1)h+=field(c.id,v,'ta');});
+  var PROC_DEF=['konceptZBV','pripominkyZBV','vyporadaniPripominek','schvalenoCM','stanoviskoTDI','stanoviskoAD','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','podpisObjednatele','cistopisOdIN'];
+  COLS.filter(function(c){return c.g==='proces';}).forEach(function(c){var v=getVal(z,c.id);if(v||PROC_DEF.indexOf(c.id)!==-1)h+=field(c.id,v,'ta');});
   h+='<h4>Fakturace</h4>';
-  COLS.filter(function(c){return c.g==='fakt';}).forEach(function(c){var v=getVal(z,c.id);if(v||['vyfakturovano','podpisObjednatele','iposEdok'].indexOf(c.id)!==-1)h+=field(c.id,v);});
+  COLS.filter(function(c){return c.g==='fakt';}).forEach(function(c){var v=getVal(z,c.id);if(v||['zadanoIPOS','iposEdok','fakturace','vyfakturovano'].indexOf(c.id)!==-1)h+=field(c.id,v);});
   h+='<h4>Moje poznámka (neztratí se při přepisu)</h4><textarea id="m-mojepozn">'+esc(note)+'</textarea>';
   h+='<div class="mbtns"><button class="btn" id="m-cancel">Zrušit</button><button class="btn save" id="m-save">Uložit</button></div></div>';
   $('modal').innerHTML=h;$('modal').classList.remove('hidden');
