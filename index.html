@@ -176,6 +176,7 @@
   .tl-item{position:relative;padding:3px 0 7px 8px}
   .tl-item:before{content:'';position:absolute;left:-7px;top:6px;width:9px;height:9px;border-radius:50%;background:var(--accent)}
   .tl-item.last:before{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+  .tl-item.urg:before{background:#f59e0b} .tl-item.urg .tl-lab b{color:#b45309}
   .tl-lab{font-size:10.5px;color:var(--muted)} .tl-val{font-size:13px;white-space:pre-line}
   .tl-empty{font-size:12px;color:var(--muted);padding:4px 0}
   .zdrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;font-size:12.5px;margin:8px 0}
@@ -638,34 +639,53 @@ var MILNIKY2=[
   {n:'Oznámeno',   full:['oznameni'], half:['navrhOzn','pripominkyOzn']},
   {n:'Pokyn',      full:['pokyn'], half:[]},
   {n:'Koncept',    full:['konceptZBV','distribuceKonceptuZBV'], half:[]},
-  {n:'Připomínky', full:['vyporadaniPripominek','distribucePosledniVerze'], half:['pripominkyZBV','pripominkyRSD','odeslanoKPripominkam','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
-  {n:'Stanoviska', full:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS'], half:['naADTDS','pripominkyADTDS']},
+  {n:'Připomínky', full:['vyporadaniPripominek','distribucePosledniVerze'], half:['pripominkyZBV','pripominkyRSD','odeslanoKPripominkam','naADTDS','pripominkyADTDS','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
+  {n:'Stanoviska', full:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS'], half:[]},
   {n:'Podpisy',    full:['podpisObjednatele','cistopisOdIN','vyfakturovano','fakturace','iposEdok','zadanoIPOS'], half:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','pokynCistopis','vracenoRSD','originaly']}
 ];
+// řádek kroku, který je jen URGENCE / čekání (krok se ještě NESTAL) — nepočítá se jako hotový
+var URG_RE=/URGENCE|čeká se na|čeká na podklad|připomínáme se/i;
+function doneVal(z,id){var v=getVal(z,id);if(!v)return '';return String(v).split('\n').filter(function(l){return l.trim()&&!URG_RE.test(l);}).join('\n');}
+// všechny záznamy kroků jako JEDNOTLIVÉ řádky, seřazené chronologicky (řádek bez data dědí datum předchozího)
+function krokEvents(z){var ev=[],n=0;
+  COLS.forEach(function(c){if(!c.krok||(c.g!=='ozn'&&c.g!=='proces'&&c.g!=='fakt'))return;var v=getVal(z,c.id);if(!v)return;var last=null;
+    String(v).split('\n').forEach(function(l){l=l.trim();if(!l)return;var t=dateTs(firstDate(l));if(t==null)t=last;else last=t;
+      ev.push({c:c,v:l,ts:t,urg:URG_RE.test(l),i:n++});});});
+  ev.sort(function(a,b){if(a.ts==null&&b.ts==null)return a.i-b.i;if(a.ts==null)return 1;if(b.ts==null)return -1;return (a.ts-b.ts)||(a.i-b.i);});
+  return ev;}
 function milnik(z){var dots=[],reached=-1,state='',date='';
   MILNIKY2.forEach(function(m,i){
-    var f=m.full.some(function(id){return getVal(z,id);});
-    var h=f||m.half.some(function(id){return getVal(z,id);});
+    var f=m.full.some(function(id){return doneVal(z,id);});
+    var h=f||m.half.some(function(id){return doneVal(z,id);});
     dots.push(f?'full':(h?'half':''));
-    if(h){reached=i;state=f?'full':'half';var dv='';m.full.concat(m.half).forEach(function(id){var v=getVal(z,id);if(v){var d=firstDate(v);if(d)dv=d;}});if(dv)date=dv;}});
+    if(h){reached=i;state=f?'full':'half';var dv='',dt=-1;m.full.concat(m.half).forEach(function(id){doneVal(z,id).split('\n').forEach(function(l){var d=firstDate(l),t=d?dateTs(d):null;if(t!=null&&t>dt){dt=t;dv=d;}});});if(dv)date=dv;}});
   var name=reached>=0?MILNIKY2[reached].n:'—';
   if(reached===MILNIKY2.length-1&&state==='full')name='Lze fakturovat ✓';  // komplet podepsáno
   return {idx:reached,total:MILNIKY2.length,name:name,state:state,dots:dots,date:date,
     next:(reached>=0&&reached<MILNIKY2.length-1)?MILNIKY2[reached+1].n:''};}
 // „na kom/čem ZBV teď visí" — odvozeno z chybějících dílčích kroků (když to rutina nenastaví ručně do z.cekaNa)
 var AKTER={podpisZhotovitel:'Zhotovitel',podpisCM:'CM',podpisTDI:'TDI',podpisAD:'AD',podpisObjednatele:'objednatel',schvalenoCM:'CM',stanoviskoTDI:'TDI',stanoviskoAD:'AD'};
+// kroky, kdy jsme něco POSLALI a čekáme na reakci příjemce
+var SENT_IDS=['navrhOzn','konceptZBV','distribuceKonceptuZBV','vyporadaniPripominek','distribucePosledniVerze','navrhCistopisu'];
 function cekaNaAuto(z,ms){
-  if(ms.idx<0)return 'oznámení / koncept ZBV';
   if(ms.idx===ms.total-1&&ms.state==='full')return '';            // komplet podepsáno
+  // 1) podle POSLEDNÍHO dění: urgence → na co urgujeme; odeslaný koncept/vypořádání → vyjádření příjemce (+ termín)
+  var ev=krokEvents(z).filter(function(e){return e.ts!=null;}),top=ev[ev.length-1];
+  if(top&&top.urg){var mu=top.v.match(/čeká se na ([^;)]+)/i);return (mu?mu[1].trim():top.c.l)+' · urgováno '+firstDate(top.v);}
+  if(top&&SENT_IDS.indexOf(top.c.id)!==-1){
+    var r=top.v.match(/>\s*([^(,;]+(?:\([^)]{1,25}\))?)/),t=top.v.match(/termín\s*([\d.\s]*\d\.?)/i);
+    return 'vyjádření'+(r?' od '+r[1].trim():'')+(t?' · termín '+t[1].trim():'');}
+  // 2) podle chybějících dílčích kroků aktuálního milníku
+  if(ms.idx<0)return 'oznámení / koncept ZBV';
   if(ms.idx===5){                                                 // Podpisy — které podpisy chybí
     var ord=['podpisZhotovitel','podpisCM','podpisTDI','podpisAD','podpisObjednatele'];
-    var miss=ord.filter(function(id){return !getVal(z,id);}).map(function(id){return AKTER[id];});
+    var miss=ord.filter(function(id){return !doneVal(z,id);}).map(function(id){return AKTER[id];});
     if(miss.length)return 'podpis: '+miss.slice(0,3).join(', ')+(miss.length>3?' …':'');
     return 'čistopis od IN';
   }
   if(ms.idx===4){                                                 // Stanoviska — čí stanovisko chybí
     var ord2=['schvalenoCM','stanoviskoTDI','stanoviskoAD'];
-    var miss2=ord2.filter(function(id){return !getVal(z,id);}).map(function(id){return AKTER[id];});
+    var miss2=ord2.filter(function(id){return !doneVal(z,id);}).map(function(id){return AKTER[id];});
     if(miss2.length)return 'stanovisko: '+miss2.join(', ');
     return 'podpisy (Zhotovitel, CM, TDI, AD, objednatel)';
   }
@@ -936,12 +956,9 @@ function zbvDetail(sid,zid,z){
     +'<textarea class="zpozn" data-pozn="'+sid+'|'+zid+'" placeholder="Poznámka k tomuto ZBV — kontakty, dohody, na co pozor… (uloží se po kliknutí jinam)">'+esc(note)+'</textarea></div>';
   var sd=stadium(z);
   h+='<div class="tl-phase">Historie / kde to kdy bylo</div>';
-  // osa SEŘAZENÁ CHRONOLOGICKY podle data (kroky bez data na konec, v pořadí procesu)
-  var tlItems=[];
-  COLS.forEach(function(c){if(!c.krok||(c.g!=='ozn'&&c.g!=='proces'&&c.g!=='fakt'))return;var v=getVal(z,c.id);if(!v)return;
-    tlItems.push({c:c,v:v,ts:dateTs(firstDate(v))});});
-  tlItems.sort(function(a,b){if(a.ts==null&&b.ts==null)return 0;if(a.ts==null)return 1;if(b.ts==null)return -1;return a.ts-b.ts;});
-  var tl=tlItems.map(function(it){return '<div class="tl-item'+(it.c.id===sd.done?' last':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[it.c.g]+' · '+it.c.l)+'</div><div class="tl-val">'+esc(it.v)+'</div></div>';}).join('');
+  // osa: KAŽDÝ záznam (řádek) zvlášť, SEŘAZENÉ CHRONOLOGICKY — nejnovější dole a zvýrazněný
+  var tlItems=krokEvents(z),lastI=-1;tlItems.forEach(function(it,k){if(it.ts!=null)lastI=k;});
+  var tl=tlItems.map(function(it,k){return '<div class="tl-item'+(k===lastI?' last':'')+(it.urg?' urg':'')+'"><div class="tl-lab">'+esc(PHASE_LBL[it.c.g]+' · '+it.c.l)+(it.urg?' · <b>urgence / čekání</b>':'')+(k===lastI?' · <b>poslední</b>':'')+'</div><div class="tl-val">'+esc(it.v)+'</div></div>';}).join('');
   h+=tl?'<div class="tl">'+tl+'</div>':'<div class="tl-empty">Zatím žádné kroky — doplní se z mailů, nebo dopiš přes „upravit".</div>';
   h+='<div class="zacts"><button class="btn" data-ed="'+sid+'|'+zid+'">✏️ upravit / doplnit</button>'
     +'<button class="btn" data-del="'+sid+'|'+zid+'" style="color:var(--neg)">✕ smazat</button></div>';
