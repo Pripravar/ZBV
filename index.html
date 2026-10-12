@@ -156,8 +156,9 @@
   .zstad{display:flex;align-items:center;gap:9px;padding:0 12px 10px;flex-wrap:wrap}
   .stadchip{font-size:12px;padding:3px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;font-weight:600}
   .msdots{display:inline-flex;gap:3px;align-items:center;margin-right:7px;vertical-align:middle}
-  .msdots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:inline-block}
-  .msdots i.on{background:var(--accent)}
+  .msdots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:inline-block;cursor:help;border:1px solid var(--line)}
+  .msdots i.full{background:var(--accent);border-color:var(--accent)}
+  .msdots i.half{background:linear-gradient(90deg,var(--accent) 0 50%,transparent 50% 100%);border-color:var(--accent)}
   .st-vproces .stadchip{background:#fef3c7;color:#92400e} .st-hotovo .stadchip{background:#dcfce7;color:#166534}
   .st-fakturovano .stadchip{background:#dbeafe;color:#1e40af} .st-bezprogresu .stadchip{background:#fee2e2;color:#991b1b} .st-evidovano .stadchip{background:#eef1f4;color:#475569}
   .vazne-badge{font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:999px}
@@ -628,19 +629,25 @@ function effStav(z){
 }
 var STAV_LBL={evidovano:'Evidováno',vproces:'V přípravě',bezprogresu:'Na připomínkách u objednatele',hotovo:'Hotovo',fakturovano:'Fakturováno',zruseno:'Zrušeno'};
 // MILNÍKY (kde ZBV je) — 7 klíčových fází; každá „splněna", když má data některý z jejích kroků
+// každý milník: `full` = hotovo oficiálně (plná tečka), `half` = rozpracováno/koncept (půlka tečky)
 var MILNIKY2=[
-  {n:'Oznámeno',   ids:['oznameni']},
-  {n:'Pokyn',      ids:['pokyn']},
-  {n:'Koncept',    ids:['konceptZBV','distribuceKonceptuZBV']},
-  {n:'Připomínky', ids:['pripominkyZBV','vyporadaniPripominek','distribucePosledniVerze','pripominkyRSD','odeslanoKPripominkam','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
-  {n:'Stanoviska', ids:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS','naADTDS','pripominkyADTDS']},
-  {n:'Podepsáno',  ids:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','podpisObjednatele','pokynCistopis','cistopisOdIN']},
-  {n:'Fakturace',  ids:['zadanoIPOS','iposEdok','fakturace','vyfakturovano','vracenoRSD','originaly']}
+  {n:'Oznámeno',   full:['oznameni'], half:['navrhOzn','pripominkyOzn']},
+  {n:'Pokyn',      full:['pokyn'], half:[]},
+  {n:'Koncept',    full:['konceptZBV','distribuceKonceptuZBV'], half:[]},
+  {n:'Připomínky', full:['vyporadaniPripominek','distribucePosledniVerze'], half:['pripominkyZBV','pripominkyRSD','odeslanoKPripominkam','navrhRozpoctu1','pripominky1','navrhRozpoctu2','pripominky2']},
+  {n:'Stanoviska', full:['schvalenoCM','stanoviskoTDI','stanoviskoAD','stanoviskoTDS'], half:['naADTDS','pripominkyADTDS']},
+  {n:'Podpisy',    full:['podpisObjednatele','cistopisOdIN','vyfakturovano','fakturace','iposEdok','zadanoIPOS'], half:['navrhCistopisu','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','predlozenoReditelstvi','predlozenoRSDTDS','pokynCistopis','vracenoRSD','originaly']}
 ];
-function milnik(z){var reached=-1,date='';
-  MILNIKY2.forEach(function(m,i){var hit=null;m.ids.forEach(function(id){var v=getVal(z,id);if(v)hit=v;});if(hit){reached=i;var d=firstDate(hit);if(d)date=d;}});
-  return {idx:reached,total:MILNIKY2.length,name:reached>=0?MILNIKY2[reached].n:'—',
-    next:(reached>=0&&reached<MILNIKY2.length-1)?MILNIKY2[reached+1].n:'',date:date};}
+function milnik(z){var dots=[],reached=-1,state='',date='';
+  MILNIKY2.forEach(function(m,i){
+    var f=m.full.some(function(id){return getVal(z,id);});
+    var h=f||m.half.some(function(id){return getVal(z,id);});
+    dots.push(f?'full':(h?'half':''));
+    if(h){reached=i;state=f?'full':'half';var dv='';m.full.concat(m.half).forEach(function(id){var v=getVal(z,id);if(v){var d=firstDate(v);if(d)dv=d;}});if(dv)date=dv;}});
+  var name=reached>=0?MILNIKY2[reached].n:'—';
+  if(reached===MILNIKY2.length-1&&state==='full')name='Lze fakturovat ✓';  // komplet podepsáno
+  return {idx:reached,total:MILNIKY2.length,name:name,state:state,dots:dots,date:date,
+    next:(reached>=0&&reached<MILNIKY2.length-1)?MILNIKY2[reached+1].n:''};}
 
 // ╔══════════════════════ STAV APLIKACE ══════════════════════╗
 var DATA={meta:{},stavby:{},zbv:{},inbox:{},poznamky:{},dulezite:{},porady:{},zapis:{sekce:{}}};
@@ -874,9 +881,10 @@ function zbvCard(sid,zid,z){
   var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
   var dny=lastKrokDays(z);
   var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⏳ u objednatele '+dny+' dní</span>':'';
-  var ms=milnik(z);var dots='';for(var _mi=0;_mi<ms.total;_mi++)dots+='<i class="'+(_mi<=ms.idx?'on':'')+'"></i>';
+  var ms=milnik(z);
+  var dots=ms.dots.map(function(s,i){var lbl=(i+1)+'. '+MILNIKY2[i].n+(s==='full'?' — ✓ hotovo':s==='half'?' — rozpracováno (koncept)':' — zatím ne');return '<i class="'+(s||'')+'" title="'+esc(lbl)+'"></i>';}).join('');
   var stadHtml=(ms.idx>=0
-    ?'<span class="msdots" title="milník '+(ms.idx+1)+'/'+ms.total+'">'+dots+'</span><span class="stadchip">'+(ms.idx+1)+'/'+ms.total+' · '+esc(ms.name)+(ms.date?' · '+esc(ms.date):'')+'</span>'+(ms.next?'<span class="zwait">další: '+esc(ms.next)+'</span>':'')
+    ?'<span class="msdots">'+dots+'</span><span class="stadchip">'+(ms.idx+1)+'/'+ms.total+' · '+esc(ms.name)+(ms.state==='half'&&!/✓/.test(ms.name)?' (rozpracováno)':'')+(ms.date?' · '+esc(ms.date):'')+'</span>'+(ms.next?'<span class="zwait">další: '+esc(ms.next)+'</span>':'')
     :'<span class="stadchip">zatím bez kroků — jen evidováno</span>')+vazne;
   var h='<div class="zcard st-'+st+(open?' open':'')+(dul?' dul':'')+(z.zruseno?' zruseno':'')+'">'
     +'<div class="zhead" data-toggle="'+sid+'|'+zid+'">'
@@ -1730,8 +1738,10 @@ function showZbvModal(z,title,note){
   h+='<h4>Proces ZBV (kroky — formát: datum Odesílatel > Příjemce)</h4>';
   var PROC_DEF=['konceptZBV','pripominkyZBV','vyporadaniPripominek','schvalenoCM','stanoviskoTDI','stanoviskoAD','finalCistopis','predlozenoPodpis','podpisZhotovitel','podpisCM','podpisTDI','podpisAD','podpisObjednatele','cistopisOdIN'];
   COLS.filter(function(c){return c.g==='proces';}).forEach(function(c){var v=getVal(z,c.id);if(v||PROC_DEF.indexOf(c.id)!==-1)h+=field(c.id,v,'ta');});
-  h+='<h4>Fakturace</h4>';
-  COLS.filter(function(c){return c.g==='fakt';}).forEach(function(c){var v=getVal(z,c.id);if(v||['zadanoIPOS','iposEdok','fakturace','vyfakturovano'].indexOf(c.id)!==-1)h+=field(c.id,v);});
+  // Fakturace se v této agendě už neudržuje (řeší stavbyvedoucí) — ukaž jen když má starší data
+  if(COLS.filter(function(c){return c.g==='fakt';}).some(function(c){return getVal(z,c.id);})){
+    h+='<h4>Fakturace <span style="font-weight:400;color:var(--muted);font-size:12px">(starší data — zde se už neudržuje)</span></h4>';
+    COLS.filter(function(c){return c.g==='fakt';}).forEach(function(c){var v=getVal(z,c.id);if(v)h+=field(c.id,v);});}
   h+='<h4>Moje poznámka (neztratí se při přepisu)</h4><textarea id="m-mojepozn">'+esc(note)+'</textarea>';
   h+='<div class="mbtns"><button class="btn" id="m-cancel">Zrušit</button><button class="btn save" id="m-save">Uložit</button></div></div>';
   $('modal').innerHTML=h;$('modal').classList.remove('hidden');
