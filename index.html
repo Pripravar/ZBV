@@ -98,6 +98,11 @@
   .smetric .v.v-pos{color:var(--pos)} .smetric .v.v-neg{color:var(--neg)}
   .smetric .lim-sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;line-height:1.35}
   .lim-prep{color:var(--vproces)}
+  #newver{position:sticky;top:0;z-index:9999;background:#1d4ed8;color:#fff;padding:9px 14px;font-size:13.5px;text-align:center}
+  #newver button{margin-left:10px;background:#fff;color:#1d4ed8;border:0;border-radius:6px;padding:4px 12px;font-weight:700;cursor:pointer}
+  .skup-tbl{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 8px}
+  .skup-tbl th{text-align:left;font-weight:600;color:var(--muted);padding:2px 4px}
+  .skup-tbl td{padding:2px 4px;vertical-align:top} .skup-tbl input{width:100%;box-sizing:border-box;margin:0 0 3px}
   .zbezceny{font-size:11.5px;font-weight:700;background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;padding:2px 8px;border-radius:999px;white-space:nowrap}
   .lim-bar{display:flex;height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:5px}
   .lim-bar i{display:block;height:100%}
@@ -834,27 +839,48 @@ function smluvniCena(s,sid){
   if(best!=null)return {cena:best,zdroj:'zbv',n:bn,varianty:Object.keys(cnt).length,rucne:(rucne!=null&&Math.abs(rucne-best)>1)?rucne:null};
   return {cena:rucne,zdroj:rucne!=null?'rucne':null};
 }
-// má ZBV nějakou cenu (hodnotu / kladné / záporné změny — i odhad z oznámení)?
-function maCenu(z){return ['hodnotaZBV','zmenyKladne','zmenyZaporne'].some(function(id){return toNum(getVal(z,id))!=null;});}
+// ROZPIS ČÁSTEK PO SKUPINÁCH (jedna ZBV může mít část ve sk. 3, část ve sk. 5 …) — z tabulky
+// „Přehled zařazení změn do skupin" (příloha 10). Klíče s1..s5 (ne "1".."5" — Firebase by z nich udělal pole).
+// zp = změny záporné (ukládám se znaménkem −), kl = změny kladné; u s3 navíc zpn = záporné NEsouvisející
+// s kladnými (do limitu 30 % se NEodečítají — dle formuláře ŘSD sl. 28.b).
+var SKUP=['s1','s2','s3','s4','s5'];
+function normSkupiny(src){if(!src||typeof src!=='object')return null;var o={},any=false;
+  SKUP.forEach(function(k){var g=src[k]||src[k.slice(1)];if(!g||typeof g!=='object')return;
+    var zp=toNum(g.zp),kl=toNum(g.kl),zpn=toNum(g.zpn),r={};
+    if(zp)r.zp=-Math.abs(zp);if(kl)r.kl=kl;if(k==='s3'&&zpn)r.zpn=-Math.abs(zpn);
+    if(Object.keys(r).length){o[k]=r;any=true;}});
+  return any?o:null;}
+function skupinyZ(z){var n=normSkupiny(z.skupiny);if(!n)return null;var o={};SKUP.forEach(function(k){var g=n[k]||{};o[k]={zp:g.zp||0,kl:g.kl||0,zpn:g.zpn||0};});return o;}
+function skupinaStr(z){var g=skupinyZ(z);if(!g)return String(getVal(z,'skupina')||'');
+  return SKUP.filter(function(k){var r=g[k];return r.zp||r.kl||r.zpn;}).map(function(k){return k.slice(1);}).join(', ');}
+// příspěvek ZBV do limitů dle formuláře ŘSD: 30 % = sk.3 (kl + související zp) + sk.4 (kl + zp)  [sl. 6=30+34];
+// 15 % = sk.5 v abs. hodnotě (|zp| + kl)  [sl. 39]. Sk. 1 a 2 se nepočítají.
+function limPrispevek(g){return {c30:(g.s3.kl+g.s3.zp)+(g.s4.kl+g.s4.zp),c15:Math.abs(g.s5.zp)+g.s5.kl};}
+// má ZBV nějakou cenu (hodnotu / kladné / záporné změny / rozpis po skupinách — i odhad z oznámení)?
+function maCenu(z){return !!skupinyZ(z)||['hodnotaZBV','zmenyKladne','zmenyZaporne'].some(function(id){return toNum(getVal(z,id))!=null;});}
 // strop limitu sk. 5 (§222 odst. 4 — finanční limit dle roku; ŘSD tabulka „Přehled zařazení změn do skupin")
 var LIMIT5_MAX=134764000, LIMIT5_MAX_OD='1.1.2026';
 // do které „vrstvy" čerpání ZBV patří (podle milníku): čistopis = daný; koncept = v řešení; oznámení = předpoklad (odhad)
 function limTier(z){var ms=milnik(z);return ms.idx>=5?'cist':(ms.idx>=2?'konc':'ozn');}
 function limity(s,sid){
-  var SC=smluvniCena(s,sid),cena=SC.cena,bezSk={n:0,sum:0},bezCeny=0;
+  var SC=smluvniCena(s,sid),cena=SC.cena,bezSk={n:0,sum:0},bezCeny=0,nerozp=[];
   var g34={cist:0,konc:0,ozn:0},g5={cist:0,konc:0,ozn:0};
   zbvOrdered(sid).forEach(function(o){
     if(o.z.zruseno)return;   // zrušené ZBV se do limitu nepočítají
     if(!maCenu(o.z))bezCeny++;
+    var t=limTier(o.z),g=skupinyZ(o.z);
+    if(g){var p=limPrispevek(g);g34[t]+=p.c30;g5[t]+=p.c15;return;}   // přesně podle rozpisu z přílohy 10
+    // bez rozpisu: 1 skupina + hodnota ZBV (abs)
     var sk=String(getVal(o.z,'skupina')||'').trim();
     var abs=Math.abs(toNum(getVal(o.z,'hodnotaZBV'))||0);if(!abs)return;
-    var t=limTier(o.z);
-    if(/3|4/.test(sk))g34[t]+=abs;
-    if(/5/.test(sk))g5[t]+=abs;
+    var m34=/3|4/.test(sk),m5=/5/.test(sk);
+    if(m34)g34[t]+=abs;
+    if(m5)g5[t]+=abs;
+    if(m34&&m5)nerozp.push('ZBV '+(getVal(o.z,'zbvCislo')||'?'));   // víc skupin bez rozpisu → konzervativně do obou
     if(!sk){bezSk.n++; bezSk.sum+=abs;}   // má hodnotu, ale žádnou skupinu → nezapočítané
   });
   var l5=cena!=null?Math.min(cena*0.15,LIMIT5_MAX):null;   // 15 %, ale max. finanční strop
-  return {cena:cena,sc:SC,l34:cena!=null?cena*0.30:null,l5:l5,l5strop:cena!=null&&cena*0.15>LIMIT5_MAX,g34:g34,g5:g5,bezSk:bezSk,bezCeny:bezCeny};
+  return {cena:cena,sc:SC,l34:cena!=null?cena*0.30:null,l5:l5,l5strop:cena!=null&&cena*0.15>LIMIT5_MAX,g34:g34,g5:g5,bezSk:bezSk,bezCeny:bezCeny,nerozp:nerozp};
 }
 // stadium = poslední vyplněný krok (v pořadí životního cyklu) = kde to teď je
 function stadium(z){
@@ -905,6 +931,7 @@ function renderTabulka(){
   metr+='<div class="smetric"><div class="l">ZBV celkem</div><div class="v">'+sc.total+'</div></div></div>';
   if(L.sc.rucne!=null)metr+='<div class="lim-warn">⚠️ Ručně zadaná cena díla u stavby (<b>'+fmtNum(L.sc.rucne)+' Kč</b>) nesedí se smluvní cenou z přílohy 10 (<b>'+fmtNum(L.cena)+' Kč</b>) — limity počítám z <b>přílohy 10</b>. Zkontroluj a případně oprav v „upravit stavbu".</div>';
   if(L.sc.varianty>1)metr+='<div class="lim-warn">⚠️ ZBV této stavby uvádějí v příloze 10 <b>'+L.sc.varianty+' různé smluvní ceny</b> — beru nejčastější ('+fmtNum(L.cena)+' Kč). Zkontroluj pole „smluvní částka" u ZBV.</div>';
+  if(L.nerozp.length)metr+='<div class="lim-warn">⚠️ <b>'+esc(L.nerozp.join(', '))+'</b> má víc skupin (3/4 i 5), ale <b>bez rozpisu částek</b> — celou hodnotu teď počítám do obou limitů (opatrně). Doplň rozpis po skupinách z přílohy 10 v „upravit ZBV".</div>';
   if(L.bezCeny>0)metr+='<div class="lim-warn">💰 <b>'+L.bezCeny+' ZBV nemá žádnou cenu</b> (ani odhad z oznámení) — v čerpání limitu chybí, takže <b>„zbývá" je ve skutečnosti méně</b>. Doplň hodnotu / odhad přes „upravit ZBV" (karty označené 💰 bez ceny).</div>';
   if(L.cena!=null&&L.bezSk.n>0)metr+='<div class="lim-warn">⚠️ <b>'+L.bezSk.n+' ZBV má hodnotu, ale nezařazenou skupinu</b> ('+fmtNum(L.bezSk.sum)+' Kč) — nepočítá se do limitu. Zařaď je přes „upravit ZBV" → pole <b>skupina</b>, ať vidíš skutečně zbývající limit na další změny.</div>';
   // součty po stavech v této stavbě (počet · peníze)
@@ -967,7 +994,7 @@ function zbvCard(sid,zid,z){
   if(kl)amt+='<span class="p">+'+kl+'</span> ';if(zp)amt+='<span class="n">−'+fmtNum(Math.abs(zp))+'</span>';
   if(!amt&&toNum(getVal(z,'hodnotaZBV'))!=null)amt='<span>'+fmtNum(getVal(z,'hodnotaZBV'))+'</span>';
   if(!maCenu(z)&&!z.zruseno)amt='<span class="zbezceny" title="Téměř každá ZBV (i oznámení) má mít cenu / odhad — bez ní je limit §222 podhodnocený. Doplň přes „upravit ZBV".">💰 bez ceny</span>';
-  var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(getVal(z,'skupina'))meta.push('sk. '+getVal(z,'skupina'));
+  var meta=[];if(getVal(z,'SO'))meta.push('SO '+getVal(z,'SO'));if(getVal(z,'resitel'))meta.push('řeší '+getVal(z,'resitel'));if(skupinaStr(z))meta.push('sk. '+skupinaStr(z));
   var dny=lastKrokDays(z);
   var vazne=(st==='bezprogresu'&&dny!=null)?'<span class="vazne-badge">⏳ u objednatele '+dny+' dní</span>':'';
   var ms=milnik(z);
@@ -1669,7 +1696,7 @@ function autoEligible(nv,jistota){
   if(!nv.stavbaId||nv.stavbaId==='?'||!DATA.stavby[nv.stavbaId])return false;
   if(!nv.zbvId||nv.zbvId==='new')return false;
   if(!(DATA.zbv[nv.stavbaId]&&DATA.zbv[nv.stavbaId][nv.zbvId]))return false;
-  if(nv.zmenyZaporne||nv.zmenyKladne||nv.hodnotaZBV||nv.skupina)return false;
+  if(nv.zmenyZaporne||nv.zmenyKladne||nv.hodnotaZBV||nv.skupina||normSkupiny(nv.skupiny))return false;
   // smluvní cena z přílohy 10: automaticky jen když SEDÍ s tou, co už stavba má; jiná/nová → ruční potvrzení
   if(nv.smluvniCastka!=null&&nv.smluvniCastka!==''){var _sc=smluvniCena(DATA.stavby[nv.stavbaId],nv.stavbaId).cena,_nv=toNum(nv.smluvniCastka);
     if(_sc==null||_nv==null||Math.abs(_sc-_nv)>1)return false;}
@@ -1710,6 +1737,8 @@ function renderInbox(){
         +'<div><span class="k">ZBV:</span> <b>'+esc(zLabel)+'</b></div>'
         +'<div><span class="k">Krok:</span> <b>'+esc(krokL)+'</b></div>'
         +'<div><span class="k">Hodnota:</span> <b>'+esc(nv.hodnota||'')+'</b></div>'
+        +(normSkupiny(nv.skupiny)?'<div><span class="k">Po skupinách:</span> '+(function(){var n=normSkupiny(nv.skupiny);return SKUP.filter(function(k){return n[k];}).map(function(k){var g=n[k];
+            return 'sk. <b>'+k.slice(1)+'</b>: '+[g.kl?'+'+fmtNum(g.kl):'',g.zp?'−'+fmtNum(Math.abs(g.zp)):'',g.zpn?'(nesouvis. −'+fmtNum(Math.abs(g.zpn))+')':''].filter(Boolean).join(' ');}).join(' · ');})()+'</div>':'')
         +((nv.hodnotaZBV||nv.zmenyKladne||nv.zmenyZaporne||nv.skupina||nv.smluvniCastka)?'<div><span class="k">Peníze:</span> '+[
             nv.hodnotaZBV?'hodnota ZBV <b>'+esc(fmtNum(toNum(nv.hodnotaZBV)))+'</b>':'',
             nv.zmenyKladne?'kladné '+esc(fmtNum(toNum(nv.zmenyKladne))):'',
@@ -1767,6 +1796,8 @@ function applyNavrh(nv){
     else{var _cc=String(z.cekaNa||'').trim();z.cekaNa=(!_cc)?_ck:(_cc.indexOf(_ck)===-1?_cc+'\n'+_ck:_cc);}}
   // částky
   ['zmenyZaporne','zmenyKladne','hodnotaZBV','skupina','smluvniCastka'].forEach(function(f){if(nv[f]!=null&&nv[f]!=='')z[f]=nv[f];});
+  // rozpis po skupinách z přílohy 10 — platí NEJPOZDĚJŠÍ fáze → celý rozpis nahradí
+  var _sk=normSkupiny(nv.skupiny);if(_sk){z.skupiny=_sk;z.skupina=skupinaStr(z);}
   if(db)db.ref('/zbv/'+sid+'/'+zid).set(z);
   // kontakty AD / TDS z mailu → doplň do detailu stavby (jen prázdná pole, nepřepisuj; TDS = role TDI)
   if(nv.kontakty&&nv.kontakty.length){var st=DATA.stavby[sid];if(st){st.lide=st.lide||{};st.lideMail=st.lideMail||{};var ch=false;
@@ -1840,6 +1871,13 @@ function showZbvModal(z,title,note){
   h+=field('pricina',getVal(z,'pricina'),'ta');
   h+='<h4>Peníze</h4>';
   h+='<div class="mgrid3">'+field('zmenyZaporne',getVal(z,'zmenyZaporne'))+field('zmenyKladne',getVal(z,'zmenyKladne'))+field('hodnotaZBV',getVal(z,'hodnotaZBV'))+'</div>';
+  // rozpis po skupinách (příloha 10 — „Přehled zařazení změn do skupin")
+  var SG=normSkupiny(z.skupiny)||{},SKL={s1:'1 · vyhrazené (§100)',s2:'2 · záměna položek',s3:'3 · nepředvídané (§222/6)',s4:'4 · nezbytné (§222/5)',s5:'5 · neměnící povahu (§222/4)'};
+  h+='<label>Rozpis po skupinách <span style="font-weight:400;color:var(--muted);font-size:12px">(z přílohy 10 — když je vyplněný, limity se počítají přesně z něj; záporné se ukládají s mínusem)</span></label><table class="skup-tbl"><tr><th>skupina</th><th>změny záporné</th><th>změny kladné</th></tr>'
+    +SKUP.map(function(k){var g=SG[k]||{};
+      return '<tr><td>'+SKL[k]+'</td><td><input id="m-sk-'+k+'-zp" value="'+esc(g.zp!=null?g.zp:'')+'">'
+        +(k==='s3'?'<div style="font-size:11px;color:var(--muted)">záporné NEsouvisející s kladnými (do limitu se neodečítají):</div><input id="m-sk-s3-zpn" value="'+esc(g.zpn!=null?g.zpn:'')+'">':'')
+        +'</td><td><input id="m-sk-'+k+'-kl" value="'+esc(g.kl!=null?g.kl:'')+'"></td></tr>';}).join('')+'</table>';
   h+='<div class="mgrid2">'+field('smluvniCastka',getVal(z,'smluvniCastka'))+'<div><label>stav</label><select id="m-stav">'
     +['','hotovo','vproces','bezprogresu'].map(function(s){return '<option value="'+s+'"'+(z.stav===s?' selected':'')+'>'+(s?STAV_LBL[s]:'(auto: '+STAV_LBL[effStav(z)]+')')+'</option>';}).join('')+'</select></div></div>';
   h+='<label class="m-zrus"><input type="checkbox" id="m-zruseno"'+(z.zruseno?' checked':'')+'> 🚫 <b>Zrušeno</b> — tato ZBV se ruší (vyřadí se z limitů i počtů, v seznamu zůstane přeškrtnutá). Pro přečíslování jiné ZBV uprav její pole <b>ZBV č.</b>.</label>';
@@ -1872,6 +1910,8 @@ function saveZbvModal(){
   });
   z.stav=gv('stav');
   var ceka=gv('cekaNa');if(ceka)z.cekaNa=ceka;else delete z.cekaNa;
+  var skIn={};SKUP.forEach(function(k){skIn[k]={zp:gv('sk-'+k+'-zp'),kl:gv('sk-'+k+'-kl'),zpn:k==='s3'?gv('sk-s3-zpn'):''};});
+  var skN=normSkupiny(skIn);if(skN){z.skupiny=skN;z.skupina=skupinaStr(z);}else delete z.skupiny;
   var zr=$('m-zruseno');if(zr&&zr.checked)z.zruseno=true;else delete z.zruseno;
   // kroky
   COLS.filter(function(c){return c.krok;}).forEach(function(c){var el=$('m-'+c.id);if(el)setVal(z,c.id,el.value.trim());});
@@ -1949,7 +1989,7 @@ function openEditNavrh(id){
     var nv2={stavbaId:sidSel,zbvId:$('n-zbv').value,krok:$('n-krok').value,hodnota:($('n-hodnota').value||'').trim(),  // pozor: gv() přidává prefix „m-", tohle pole ho nemá
       zbvCislo:gv('zbvCislo'),oznameniCislo:gv('oznameniCislo'),SO:gv('SO'),nazev:gv('nazev'),
       zmenyZaporne:gv('zmenyZaporne'),zmenyKladne:gv('zmenyKladne'),hodnotaZBV:gv('hodnotaZBV'),
-      popis:nv.popis,kontakty:nv.kontakty||null,skupina:nv.skupina,smluvniCastka:nv.smluvniCastka};
+      popis:nv.popis,kontakty:nv.kontakty||null,skupina:nv.skupina,smluvniCastka:nv.smluvniCastka,skupiny:nv.skupiny};
     var _ck=($('n-cekaNa').value||'').trim();if(_ck||nv.cekaNa!=null)nv2.cekaNa=_ck;   // prázdné jen když návrh „čeká na" nesl → vyčistí
     if(!nv2.stavbaId){alert('Vyber stavbu.');return;}
     var res=applyNavrh(nv2);if(!res)return;
@@ -2217,6 +2257,18 @@ if(DEMO_MODE){
   $('logout').addEventListener('click',function(){started=false;auth.signOut();});
   auth.onAuthStateChanged(function(user){if(user){startApp();}else{started=false;$('gate').classList.remove('hidden');$('topbar').classList.add('hidden');$('app').classList.add('hidden');$('g-login').textContent='Přihlásit';}});
 }
+// ── HLÍDÁNÍ NOVÉ VERZE: stará verze z cache prohlížeče může při potvrzení zahodit nová pole (stalo se se smluvní cenou).
+// Při každém nasazení ZVEDNI APP_VER. Appka si porovná svou verzi s tou na webu a nabídne obnovení.
+var APP_VER='2026-10-13a';
+function checkNewVersion(){
+  if(!/^https?:$/.test(location.protocol)||/localhost|127\.0\.0\.1/.test(location.host))return;
+  fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(t){
+    var m=t.match(/var APP_VER='([^']+)'/);if(m&&m[1]!==APP_VER)showNewVer();}).catch(function(){});}
+function showNewVer(){if(document.getElementById('newver'))return;var d=document.createElement('div');d.id='newver';
+  d.innerHTML='🔄 Je k dispozici <b>nová verze appky</b> — obnov stránku, ať se při potvrzování nic neztratí. <button type="button">Obnovit teď</button>';
+  d.querySelector('button').onclick=function(){location.reload();};document.body.insertBefore(d,document.body.firstChild);}
+setTimeout(checkNewVersion,10000);setInterval(checkNewVersion,180000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)checkNewVersion();});
 </script>
 </body>
 </html>
